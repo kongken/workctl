@@ -22,20 +22,27 @@ import (
 	"github.com/kongken/workctl/internal/cmduser"
 	"github.com/kongken/workctl/internal/config"
 	"github.com/kongken/workctl/internal/credentials"
+	clierrors "github.com/kongken/workctl/internal/errors"
 	"github.com/kongken/workctl/internal/keyring"
 	"github.com/kongken/workctl/internal/version"
 	"github.com/spf13/cobra"
 )
 
-// NewRoot builds the linear CLI root command.
+// NewRoot builds the single workctl command tree. Linear commands live at the
+// root; Plane registers its own group on top of this root.
 func NewRoot() *cobra.Command {
 	var workspace string
 
 	cmd := &cobra.Command{
-		Use:     "linear",
-		Version: version.Version,
-		Short:   "Handy linear commands from the command line.",
-		Long: `Handy linear commands from the command line.
+		Use:           "workctl",
+		Version:       version.Version,
+		Short:         "Manage Linear and Plane work from the command line.",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		Long: `Manage Linear and Plane work from the command line.
+
+Linear commands are available directly (for example "workctl issue view").
+Plane commands are grouped under "plane".
 
 Environment Variables:
   LINEAR_DEBUG=1              Show full error details including stack traces
@@ -44,12 +51,19 @@ Environment Variables:
 			fmt.Fprintln(cmd.OutOrStdout(), "Use --help to see available commands")
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// Plane has an independent configuration and credential store.
+			if inPlaneTree(cmd) {
+				return
+			}
 			config.SetCLIWorkspace(workspace)
 			_ = config.LoadProjectConfigFromCwd()
 			keyring.UseOS()
 			_, _ = credentials.Load()
 		},
 	}
+	cmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return clierrors.NewValidationError(err.Error())
+	})
 
 	cmd.PersistentFlags().StringVar(&workspace, "workspace", "", "Target workspace (uses credentials)")
 
@@ -109,7 +123,12 @@ Environment Variables:
 	return cmd
 }
 
-// Execute runs the root command.
-func Execute() error {
-	return NewRoot().Execute()
+// inPlaneTree reports whether cmd is the plane group or one of its descendants.
+func inPlaneTree(cmd *cobra.Command) bool {
+	for c := cmd; c != nil; c = c.Parent() {
+		if c.Name() == "plane" {
+			return true
+		}
+	}
+	return false
 }

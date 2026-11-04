@@ -112,7 +112,7 @@ func newLogoutCommand() *cobra.Command {
 				errors.HandleError(
 					errors.NewValidationError(
 						"workspace argument required when multiple workspaces are configured",
-						errors.WithSuggestion("Pass a workspace slug or run `linear auth list`."),
+						errors.WithSuggestion("Pass a workspace slug or run `workctl auth list`."),
 					),
 					"Failed to logout",
 				)
@@ -154,7 +154,7 @@ func newListCommand() *cobra.Command {
 			workspaces := credentials.Workspaces()
 			if len(workspaces) == 0 {
 				fmt.Fprintln(cmd.OutOrStdout(), "No workspaces configured")
-				fmt.Fprintln(cmd.OutOrStdout(), "Run `linear auth login` to add a workspace")
+				fmt.Fprintln(cmd.OutOrStdout(), "Run `workctl auth login` to add a workspace")
 				return
 			}
 			def := credentials.DefaultWorkspace()
@@ -190,7 +190,7 @@ func newDefaultCommand() *cobra.Command {
 			workspaces := credentials.Workspaces()
 			if len(workspaces) == 0 {
 				errors.HandleError(
-					errors.NewAuthError("No workspaces configured", errors.WithSuggestion("Run `linear auth login` to add a workspace")),
+					errors.NewAuthError("No workspaces configured", errors.WithSuggestion("Run `workctl auth login` to add a workspace")),
 					"Failed to set default workspace",
 				)
 				os.Exit(1)
@@ -318,7 +318,7 @@ func newStatusCommand() *cobra.Command {
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Credential storage: %s\n", storage)
 			if inline {
-				fmt.Fprintln(cmd.OutOrStdout(), "  Run `linear auth migrate` to migrate to the system keyring.")
+				fmt.Fprintln(cmd.OutOrStdout(), "  Run `workctl auth migrate` to migrate to the system keyring.")
 			}
 		},
 	}

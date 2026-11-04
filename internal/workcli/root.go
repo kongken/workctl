@@ -9,15 +9,14 @@ import (
 	"github.com/kongken/workctl/internal/cli"
 	"github.com/kongken/workctl/internal/cmdplane"
 	clierrors "github.com/kongken/workctl/internal/errors"
-	"github.com/kongken/workctl/internal/version"
 	"github.com/spf13/cobra"
 )
 
-// NewRoot creates an independent command tree; the legacy Linear tree is reused intact.
+// NewRoot creates the single workctl command tree: Linear commands at the root
+// plus the Plane group. No separate linear entrypoint is registered.
 func NewRoot() *cobra.Command {
-	root := &cobra.Command{Use: "workctl", Short: "Manage work in Linear and Plane", Version: version.Version, SilenceErrors: true, SilenceUsage: true}
-	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return clierrors.NewValidationError(err.Error()) })
-	root.AddCommand(cli.NewRoot(), cmdplane.New())
+	root := cli.NewRoot()
+	root.AddCommand(cmdplane.New())
 	return root
 }
 

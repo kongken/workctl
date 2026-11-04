@@ -76,7 +76,7 @@ func ResolvedAPIKey() (string, error) {
 		}
 		return "", errors.NewValidationError(
 			fmt.Sprintf("Workspace %q not found in credentials.", cliWorkspace),
-			errors.WithSuggestion("Run `linear auth login` to add it, or `linear auth list` to see configured workspaces."),
+			errors.WithSuggestion("Run `workctl auth login` to add it, or `workctl auth list` to see configured workspaces."),
 		)
 	}
 
@@ -92,7 +92,7 @@ func ResolvedAPIKey() (string, error) {
 	}
 
 	return "", errors.NewAuthError(
-		"No API key configured. Set LINEAR_API_KEY, add api_key to .linear.toml, or run `linear auth login`.",
+		"No API key configured. Set LINEAR_API_KEY, add api_key to .linear.toml, or run `workctl auth login`.",
 	)
 }
 

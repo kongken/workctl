@@ -19,16 +19,16 @@ RESOLVING PEOPLE
 Look the person up in the relevant team first. The team can usually be
 inferred from the issue identifier or the current directory:
 
-linear team members ENG --json
+workctl team members ENG --json
 
 Paste the selected member's ` + "`url`" + ` field verbatim. If the intended person is
 not a member of that team, stop and confirm before searching the whole
-workspace with ` + "`linear user list --json`" + `; mentioning someone outside the team
+workspace with ` + "`workctl user list --json`" + `; mentioning someone outside the team
 is likely accidental.
 
 To mention an issue, use its URL the same way:
 
-linear issue url ENG-123
+workctl issue url ENG-123
 
 COLLAPSIBLE SECTIONS
 

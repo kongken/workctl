@@ -23,9 +23,9 @@
 
 HTTP 行为已验证：v1/v2 路径前缀与 PAT header、POST 不自动重试、取消后结果未知、GET 遵守 Retry-After、跨 origin 重定向拒绝、原始路径拒绝跨版本/遍历。请求中只使用具体 DTO 或显式原生 JSON；Linear GraphQL client/schema 未改。
 
-当前代码结构：`internal/plane` 为公开操作 module，私有 `v1Adapter/v2Adapter` 集中处理 payload 与分页格式；`cmdplane` 负责 CLI；`planeconfig/planeauth` 独立于 Linear；`workcli` 复用原 Linear 命令树。没有为两个版本制造不同的外部 CRUD 接口。
+当前代码结构：`internal/plane` 为公开操作 module，私有 `v1Adapter/v2Adapter` 集中处理 payload 与分页格式；`cmdplane` 负责 CLI；`planeconfig/planeauth` 独立于 Linear；`workcli` 复用原 Linear 命令树作为 `workctl` 根命令，`linear` 子命令与 `cmd/linear` 已移除。没有为两个版本制造不同的外部 CRUD 接口。
 
-阶段状态：P1 已实现并通过本地测试；P2/P3/P4 已有上述功能代码，但真实目标验收尚未完成。P5 文档和双 binary CI 构建已加入，未发布发行版。PL-01 的分发命名核验、指定测试目标、Cloud/CE 真实 CRUD/关联/文件验收，以及后续估算查值、OAuth/扩展资源仍需完成。不能把本预览称为已稳定支持所有自建版本。
+阶段状态：P1 已实现并通过本地测试；P2/P3/P4 已有上述功能代码，但真实目标验收尚未完成。P5 文档和单入口 CI 构建已加入，未发布发行版。PL-01 的分发命名核验、指定测试目标、Cloud/CE 真实 CRUD/关联/文件验收，以及后续估算查值、OAuth/扩展资源仍需完成。不能把本预览称为已稳定支持所有自建版本。
 
 真实验收应使用专用可清理项目，记录实例 edition/version/base path、身份/项目访问、创建→回读→更新→评论→关联→上传→清理的状态码和资源 ID。不要把 PAT、签名 URL 或存储凭据写入记录。任何普通 CI 测试都不自动向外部账户写入。
 
@@ -36,7 +36,7 @@ HTTP 行为已验证：v1/v2 路径前缀与 PAT header、POST 不自动重试�
 | `go test ./... -count=1 -timeout 90s` | 全仓通过，包含原 Linear 测试 |
 | `go vet ./...` | 通过 |
 | 新增 Plane/config/auth/CLI module 的 `go test -race` | 通过 |
-| `cmd/linear` 与 `cmd/workctl` 原生构建及帮助 | 通过 |
-| Linux、macOS、Windows amd64（`CGO_ENABLED=0`）两个入口交叉编译 | 六个构建通过；不代表目标系统运行验收 |
+| `cmd/workctl` 原生构建及帮助 | 通过 |
+| Linux、macOS、Windows amd64（`CGO_ENABLED=0`）单一入口交叉编译 | 三个构建通过；不代表目标系统运行验收 |
 | 17 条命令帮助、文档链接/锚点与 TOML 示例 | 通过 |
 | 带凭据 Cloud/CE API、真实存储、目标平台 keyring | 未执行 |

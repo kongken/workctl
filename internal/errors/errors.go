@@ -89,13 +89,13 @@ type AuthError struct {
 func NewAuthError(message string, opts ...Option) *AuthError {
 	e := &AuthError{CliError: CliError{
 		UserMessage: message,
-		Suggestion:  "Run `linear auth login` to authenticate.",
+		Suggestion:  "Run `workctl auth login` to authenticate.",
 	}}
 	for _, opt := range opts {
 		opt(&e.CliError)
 	}
 	if e.Suggestion == "" {
-		e.Suggestion = "Run `linear auth login` to authenticate."
+		e.Suggestion = "Run `workctl auth login` to authenticate."
 	}
 	return e
 }

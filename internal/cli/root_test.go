@@ -9,7 +9,7 @@ import (
 	"github.com/kongken/workctl/internal/config"
 )
 
-func TestRootHelpListsLinear(t *testing.T) {
+func TestRootHelpListsWorkctl(t *testing.T) {
 	buf := new(bytes.Buffer)
 	cmd := cli.NewRoot()
 	cmd.SetOut(buf)
@@ -18,8 +18,11 @@ func TestRootHelpListsLinear(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "linear") {
+	if !strings.Contains(out, "workctl") {
 		t.Fatalf("help missing name: %s", out)
+	}
+	if strings.Contains(out, "linear") {
+		t.Fatalf("help still advertises a linear command: %s", out)
 	}
 }
 
