@@ -64,7 +64,7 @@ func FetchMineIssues(ctx context.Context, opts MineOptions) (json.RawMessage, er
 	if opts.TeamKey == "" {
 		return nil, errors.NewValidationError(
 			"No default team configured and no team scope provided",
-			errors.WithSuggestion("Use --team <key> to specify a team, or run `linear config` to link this repository to a team."),
+			errors.WithSuggestion("Use --team <key> to specify a team, or run `workctl config` to link this repository to a team."),
 		)
 	}
 	if opts.Unassigned && opts.AllAssignees {

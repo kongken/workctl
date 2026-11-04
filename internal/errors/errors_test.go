@@ -44,7 +44,7 @@ func TestValidationErrorSuggestion(t *testing.T) {
 
 func TestAuthErrorDefaultSuggestion(t *testing.T) {
 	err := errors.NewAuthError("no key")
-	if !strings.Contains(err.Suggestion, "linear auth login") {
+	if !strings.Contains(err.Suggestion, "workctl auth login") {
 		t.Fatalf("suggestion: %q", err.Suggestion)
 	}
 }

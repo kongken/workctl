@@ -1,6 +1,6 @@
 ## basics
 
-- this is a Go app (`cmd/linear`, `internal/...`)
+- this is a Go app with a single entrypoint (`cmd/workctl`, `internal/...`); Linear commands sit at the root, Plane commands under `plane`
 - after editing GraphQL documents under `internal/gql/queries/`, run `go generate ./internal/gql/`
 - `graphql/schema.graphql` is Linear's API schema
 - for diagnostics use `go test ./...` and `go vet ./...`

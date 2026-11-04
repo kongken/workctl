@@ -1,6 +1,6 @@
 # workctl
 
-Command-line client for Linear and Plane, written in Go. The existing `linear` executable remains available with its original commands, configuration, credentials, and JSON output.
+Command-line client for Linear and Plane, written in Go. `workctl` is the only executable: Linear commands live at the root and Plane commands under `plane`.
 
 Plane support is a preview validated against local API fixtures. Authenticated Cloud and self-hosted deployment validation is still pending; see the [compatibility matrix](docs/compatibility.md).
 
@@ -8,26 +8,22 @@ Plane support is a preview validated against local API fixtures. Authenticated C
 
 ```bash
 go build -o workctl ./cmd/workctl
-go build -o linear ./cmd/linear
 ```
 
-The existing installation path remains supported:
+The installation path is:
 
 ```bash
-go install github.com/kongken/workctl/cmd/linear@latest
+go install github.com/kongken/workctl/cmd/workctl@latest
 ```
-
-Build the Plane preview from this checkout until a release containing `cmd/workctl` is published. See [installation](docs/installation.md).
 
 ## Linear
 
 ```bash
 export LINEAR_API_KEY=lin_api_...
-# or: linear auth login
+# or: workctl auth login
 
-linear issue mine
-linear issue view ENG-123 --json
-workctl linear issue view ENG-123 --json
+workctl issue mine
+workctl issue view ENG-123 --json
 ```
 
 ## Plane
@@ -52,7 +48,6 @@ go test ./...
 go vet ./...
 go test -race ./internal/plane/... ./internal/planeconfig ./internal/planeauth ./internal/cmdplane ./internal/workcli
 go generate ./internal/gql/
-go build -o linear ./cmd/linear
 go build -o workctl ./cmd/workctl
 ```
 

@@ -67,7 +67,7 @@ func IssueIdentifier(providedID string) (string, error) {
 			if !ok || team == "" {
 				return "", errors.NewValidationError(
 					"an integer id was provided, but no team is set",
-					errors.WithSuggestion("Run `linear config` to set a team."),
+					errors.WithSuggestion("Run `workctl config` to set a team."),
 				)
 			}
 			if normalized, ok := issueid.NormalizeIssueIdentifier(team + "-" + providedID); ok {

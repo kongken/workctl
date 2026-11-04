@@ -89,7 +89,7 @@ func FetchQueryIssues(ctx context.Context, opts QueryOptions) (json.RawMessage, 
 	if !opts.AllTeams && len(opts.TeamKeys) == 0 {
 		return nil, errors.NewValidationError(
 			"No team scope provided",
-			errors.WithSuggestion("Use --team <key>, --all-teams, or configure team_id via `linear config`."),
+			errors.WithSuggestion("Use --team <key>, --all-teams, or configure team_id via `workctl config`."),
 		)
 	}
 	if opts.Project != "" && opts.ProjectLabel != "" {

@@ -83,7 +83,7 @@ func Resolve(ctx context.Context, reference string, scope *Scope) (*Template, er
 		if err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "no template found") {
 				return nil, errors.NewNotFoundError("Template", reference,
-					errors.WithSuggestion("Run `linear template list` to see every template."))
+					errors.WithSuggestion("Run `workctl template list` to see every template."))
 			}
 			return nil, err
 		}
@@ -138,13 +138,13 @@ func Resolve(ctx context.Context, reference string, scope *Scope) (*Template, er
 			what = scope.Type + " templates"
 		}
 		names := uniqueSortedNames(parsed.Templates, func(t Template) bool { return inScope(t, scope) })
-		suggestion := fmt.Sprintf("No %s are available here. Run `linear template list` to see every template.", what)
+		suggestion := fmt.Sprintf("No %s are available here. Run `workctl template list` to see every template.", what)
 		if len(names) > 0 {
 			quoted := make([]string, len(names))
 			for i, n := range names {
 				quoted[i] = `"` + n + `"`
 			}
-			suggestion = fmt.Sprintf("Available %s: %s. Run `linear template list` to see every template.", what, strings.Join(quoted, ", "))
+			suggestion = fmt.Sprintf("Available %s: %s. Run `workctl template list` to see every template.", what, strings.Join(quoted, ", "))
 		}
 		return nil, errors.NewNotFoundError("Template", reference, errors.WithSuggestion(suggestion))
 	}
@@ -190,7 +190,7 @@ func scopeMismatchError(matches []Template, scope Scope) error {
 	}
 	return errors.NewValidationError(
 		fmt.Sprintf("Template %q is a %s template, not a %s template", matches[0].Name, matches[0].Type, scope.Type),
-		errors.WithSuggestion(fmt.Sprintf("Run `linear template list --type %s` to see the %s templates.", scope.Type, scope.Type)),
+		errors.WithSuggestion(fmt.Sprintf("Run `workctl template list --type %s` to see the %s templates.", scope.Type, scope.Type)),
 	)
 }
 

@@ -1,6 +1,6 @@
 # Plane 使用说明
 
-Plane 目前为预览实现。以下命令已经实现，本地接口测试不代表已验证真实 Cloud/自建部署；当前能力见 [兼容矩阵](compatibility.md)。旧 `linear` 命令继续访问 Linear。
+Plane 目前为预览实现。以下命令已经实现，本地接口测试不代表已验证真实 Cloud/自建部署；当前能力见 [兼容矩阵](compatibility.md)。Linear 命令与 Plane 命令共用 `workctl` 单一入口，Linear 命令直接位于根命令下。
 
 ## 登录与实例
 

@@ -509,7 +509,7 @@ func newAutolinksCommand() *cobra.Command {
 				errors.HandleError(
 					errors.NewValidationError(
 						"Could not determine team id from directory name",
-						errors.WithSuggestion("Run `linear config` to set a team."),
+						errors.WithSuggestion("Run `workctl config` to set a team."),
 					),
 					"Failed to configure autolinks",
 				)

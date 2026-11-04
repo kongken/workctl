@@ -449,7 +449,7 @@ func newCreateCommand() *cobra.Command {
 				errors.HandleError(
 					errors.NewValidationError(
 						"team is required",
-						errors.WithSuggestion("Pass --team or configure team_id via `linear config`."),
+						errors.WithSuggestion("Pass --team or configure team_id via `workctl config`."),
 					),
 					"Failed to create issue",
 				)

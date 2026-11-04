@@ -34,7 +34,7 @@ func TestLinearJSONCompatibility(t *testing.T) {
 	}
 	root := workcli.NewRoot()
 	root.SetOut(newOutput)
-	root.SetArgs([]string{"linear", "issue", "view", "ENG-42", "--json"})
+	root.SetArgs([]string{"issue", "view", "ENG-42", "--json"})
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -66,5 +66,13 @@ func TestPlaneArgumentErrorsHaveNoDataOutput(t *testing.T) {
 		if strings.Count(errOut.String(), "✗") != 1 {
 			t.Fatalf("error rendered more than once: %s", errOut)
 		}
+	}
+}
+
+func TestLinearEntrypointRemoved(t *testing.T) {
+	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
+	code := workcli.Run(context.Background(), []string{"linear", "issue", "view", "ENG-1"}, strings.NewReader(""), out, errOut)
+	if code != 2 || out.Len() != 0 || !strings.Contains(errOut.String(), `unknown command "linear"`) {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, out, errOut)
 	}
 }
