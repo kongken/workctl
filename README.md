@@ -16,14 +16,14 @@ The installation path is:
 go install github.com/kongken/workctl/cmd/workctl@latest
 ```
 
-## Linear
+Linear commands are available directly for compatibility, or explicitly under `linear` when using the same grouped shape as Plane:
 
 ```bash
 export LINEAR_API_KEY=lin_api_...
 # or: workctl auth login
 
 workctl issue mine
-workctl issue view ENG-123 --json
+workctl linear issue view ENG-123 --json
 ```
 
 ## Plane

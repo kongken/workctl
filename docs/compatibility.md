@@ -23,7 +23,7 @@
 
 HTTP 行为已验证：v1/v2 路径前缀与 PAT header、POST 不自动重试、取消后结果未知、GET 遵守 Retry-After、跨 origin 重定向拒绝、原始路径拒绝跨版本/遍历。请求中只使用具体 DTO 或显式原生 JSON；Linear GraphQL client/schema 未改。
 
-当前代码结构：`internal/plane` 为公开操作 module，私有 `v1Adapter/v2Adapter` 集中处理 payload 与分页格式；`cmdplane` 负责 CLI；`planeconfig/planeauth` 独立于 Linear；`workcli` 复用原 Linear 命令树作为 `workctl` 根命令，`linear` 子命令与 `cmd/linear` 已移除。没有为两个版本制造不同的外部 CRUD 接口。
+当前代码结构：`internal/plane` 为公开操作 module，私有 `v1Adapter/v2Adapter` 集中处理 payload 与分页格式；`cmdplane` 负责 CLI；`planeconfig/planeauth` 独立于 Linear；`workcli` 复用同一套 Linear 命令树，同时提供根级兼容入口和 `workctl linear` 显式服务入口。没有为两个版本制造不同的外部 CRUD 接口。
 
 阶段状态：P1 已实现并通过本地测试；P2/P3/P4 已有上述功能代码，但真实目标验收尚未完成。P5 文档和单入口 CI 构建已加入，未发布发行版。PL-01 的分发命名核验、指定测试目标、Cloud/CE 真实 CRUD/关联/文件验收，以及后续估算查值、OAuth/扩展资源仍需完成。不能把本预览称为已稳定支持所有自建版本。
 

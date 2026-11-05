@@ -1,13 +1,14 @@
 # 升级与回退
 
-`linear` binary 已移除，`workctl` 是唯一入口；Linear 命令直接在根命令下，不再有 `linear` 子命令：
+`linear` binary 已移除，`workctl` 是唯一入口。为与 `plane` 对称，新增 `workctl linear` 显式服务入口；原有直接命令继续兼容：
 
 ```bash
-# 原脚本
+# 原脚本与兼容入口
 linear --workspace acme issue view ENG-42 --json
-
-# 新版唯一入口
 workctl --workspace acme issue view ENG-42 --json
+
+# 对称的显式服务入口
+workctl --workspace acme linear issue view ENG-42 --json
 ```
 
 迁移只改命令名：参数、别名、JSON 输出、`LINEAR_*` 环境变量、当前目录 `linear.toml` / `.linear.toml`、原 credentials/keyring 路径都不变。`LINEAR_API_KEY` 与 Linear `--workspace` 的原冲突规则仍保留。Plane 的 profile 只影响 `workctl plane`；没有默认 provider 或 `workctl issue` 自动路由。

@@ -2,7 +2,7 @@
 
 日期：2026-10-29。设计基于代码 `19bfbf6` 和 [Plane API 调研](../research/plane-api.md)。状态：实施中，已有 `workctl` 单入口及 Plane 预览代码。
 
-> 入口决策已更新：最终只保留 `cmd/workctl` 一个可执行文件，Linear 命令直接挂在 `workctl` 根命令下；`cmd/linear` 与 `workctl linear` 子命令已移除。下文涉及双入口 / `workctl linear` 的描述是当时的计划记录，以当前 README、[安装](../installation.md) 与 [升级与回退](../migration.md) 为准。本文保留完整目标与交付门槛，当前实际能力、实现差异和待验收项以 [兼容矩阵](../compatibility.md) 为准；不能将下列所有目标视为均已完成。
+> 入口决策：只保留 `cmd/workctl` 一个可执行文件，并提供 `workctl linear` / `workctl plane` 对称服务入口；Linear 命令同时保留在 `workctl` 根命令下以兼容现有脚本。`cmd/linear` 已移除。本文保留早期双入口方案的历史记录；实际命令以当前 README、[安装](../installation.md) 与 [升级与回退](../migration.md) 为准。本文保留完整目标与交付门槛，当前实际能力、实现差异和待验收项以 [兼容矩阵](../compatibility.md) 为准；不能将下列所有目标视为均已完成。
 
 本计划将现有 Linear 专用工具扩展为同时支持 Linear 与 Plane 的工作管理 CLI。采用中性名称 **`workctl`**，按服务显式分组；保留 **`linear`** 可执行文件及现有使用方式。先交付 Cloud v2 核心闭环，再实现自建 v1，最后完成资源工作流、发布与兼容验收。不承诺把全部 Linear 特性机械复制到 Plane。
 

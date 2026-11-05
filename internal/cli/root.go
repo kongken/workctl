@@ -29,10 +29,8 @@ import (
 )
 
 // NewRoot builds the single workctl command tree. Linear commands live at the
-// root; Plane registers its own group on top of this root.
+// root for compatibility; the workctl wrapper adds the explicit service groups.
 func NewRoot() *cobra.Command {
-	var workspace string
-
 	cmd := &cobra.Command{
 		Use:           "workctl",
 		Version:       version.Version,
@@ -50,23 +48,45 @@ Environment Variables:
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Fprintln(cmd.OutOrStdout(), "Use --help to see available commands")
 		},
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// Plane has an independent configuration and credential store.
-			if inPlaneTree(cmd) {
-				return
-			}
-			config.SetCLIWorkspace(workspace)
-			_ = config.LoadProjectConfigFromCwd()
-			keyring.UseOS()
-			_, _ = credentials.Load()
-		},
 	}
+	configureRoot(cmd)
+	registerLinearCommands(cmd)
+	return cmd
+}
+
+// NewLinearRoot builds an explicit Linear command group for the workctl
+// wrapper. It shares the same command constructors as the compatibility root.
+func NewLinearRoot() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:           "linear",
+		Short:         "Manage Linear workspaces and work items",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+	}
+	registerLinearCommands(cmd)
+	return cmd
+}
+
+func configureRoot(cmd *cobra.Command) {
+	var workspace string
+
+	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		// Plane has an independent configuration and credential store.
+		if inPlaneTree(cmd) {
+			return
+		}
+		config.SetCLIWorkspace(workspace)
+		_ = config.LoadProjectConfigFromCwd()
+		keyring.UseOS()
+		_, _ = credentials.Load()
+	}
+	cmd.PersistentFlags().StringVar(&workspace, "workspace", "", "Target workspace (uses credentials)")
 	cmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
 		return clierrors.NewValidationError(err.Error())
 	})
+}
 
-	cmd.PersistentFlags().StringVar(&workspace, "workspace", "", "Target workspace (uses credentials)")
-
+func registerLinearCommands(cmd *cobra.Command) {
 	issueCmd := cmdissue.New()
 	issueCmd.Aliases = []string{"i"}
 
@@ -119,8 +139,6 @@ Environment Variables:
 		cmdapi.New(),
 		cmdmarkdown.New(),
 	)
-
-	return cmd
 }
 
 // inPlaneTree reports whether cmd is the plane group or one of its descendants.

@@ -16,7 +16,7 @@ import (
 // plus the Plane group. No separate linear entrypoint is registered.
 func NewRoot() *cobra.Command {
 	root := cli.NewRoot()
-	root.AddCommand(cmdplane.New())
+	root.AddCommand(cli.NewLinearRoot(), cmdplane.New())
 	return root
 }
 
