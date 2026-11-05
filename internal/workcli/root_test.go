@@ -43,6 +43,18 @@ func TestLinearJSONCompatibility(t *testing.T) {
 	}
 }
 
+func TestLinearCommandGroup(t *testing.T) {
+	root := workcli.NewRoot()
+	output := new(bytes.Buffer)
+	root.SetOut(output)
+	root.SetArgs([]string{"linear", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "Manage Linear workspaces") {
+		t.Fatalf("missing explicit Linear command group: %s", output)
+	}
+}
 func TestPlaneHelpRequiresNoCredentials(t *testing.T) {
 	root := workcli.NewRoot()
 	output := new(bytes.Buffer)
@@ -69,10 +81,15 @@ func TestPlaneArgumentErrorsHaveNoDataOutput(t *testing.T) {
 	}
 }
 
-func TestLinearEntrypointRemoved(t *testing.T) {
-	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
-	code := workcli.Run(context.Background(), []string{"linear", "issue", "view", "ENG-1"}, strings.NewReader(""), out, errOut)
-	if code != 2 || out.Len() != 0 || !strings.Contains(errOut.String(), `unknown command "linear"`) {
-		t.Fatalf("code=%d stdout=%q stderr=%q", code, out, errOut)
+func TestLinearEntrypointAcceptsGroupedCommands(t *testing.T) {
+	root := workcli.NewRoot()
+	output := new(bytes.Buffer)
+	root.SetOut(output)
+	root.SetArgs([]string{"linear", "issue", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "Manage Linear issues") {
+		t.Fatalf("missing Linear issue command: %s", output)
 	}
 }

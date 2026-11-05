@@ -7,6 +7,7 @@ go build -o workctl ./cmd/workctl
 go install github.com/kongken/workctl/cmd/workctl@latest
 ./workctl --help
 ./workctl issue --help
+./workctl linear issue --help
 ./workctl plane --help
 ```
 
@@ -14,4 +15,4 @@ Windows 输出名可用 `workctl.exe`。Plane 预览需从包含本实现的 che
 
 CI 对现有代码执行 test/vet，构建 `cmd/workctl`，并交叉编译 Linux/macOS/Windows amd64；这不等于已验证这些平台的系统 keyring 运行行为。
 
-原 `linear` binary 不再构建，也不存在 `workctl linear` 子命令。升级方式见 [升级与回退](migration.md)。
+原 `linear` binary 不再构建。`workctl linear` 提供与 `workctl plane` 对称的显式入口，同时保留直接的 `workctl issue` 等兼容命令。升级方式见 [升级与回退](migration.md)。
