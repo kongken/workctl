@@ -77,6 +77,35 @@ func TestSharedFileAllowsLinearSectionButRejectsUnknownPlaneKeys(t *testing.T) {
 		t.Fatalf("unknown Plane key was accepted: %v", err)
 	}
 }
+func TestSharedConfigPreservesLinearDataOnPlaneWrites(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "workctl.toml")
+	content := "schema_version = 1\n[linear]\nteam_id = 'ENG'\napi_key = 'linear-secret'\n[plane]\ndefault_profile = 'cloud'\n[plane.profiles.cloud]\nbase_url = 'https://api.plane.so'\nworkspace = 'acme'\napi_version = 'v2'\n"
+	if err := os.WriteFile(file, []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	r := planeconfig.Resolver{UserFile: file, ProjectDir: t.TempDir(), Getenv: func(string) string { return "" }}
+	if err := r.SaveProfile("cloud", planeconfig.Profile{BaseURL: "https://api.plane.so", Workspace: "acme", APIVersion: "v2"}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "team_id") || !strings.Contains(string(data), "linear-secret") {
+		t.Fatalf("Linear settings lost after SaveProfile: %s", data)
+	}
+	if err := r.SetDefault("cloud"); err != nil {
+		t.Fatal(err)
+	}
+	data, err = os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "team_id") || !strings.Contains(string(data), "linear-secret") {
+		t.Fatalf("Linear settings lost after SetDefault: %s", data)
+	}
+}
 func TestInvalidConfigFailsInsteadOfUsingDefaults(t *testing.T) {
 	for _, text := range []string{"schema_version=2\n", "schema_version=1\n[plane]\napi_key='secret'\n"} {
 		dir := t.TempDir()

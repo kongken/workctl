@@ -365,12 +365,25 @@ func (r Resolver) SetDefault(name string) error {
 	return r.save(cfg)
 }
 func (r Resolver) save(cfg UserConfig) error {
-	var buf bytes.Buffer
-	if err := toml.NewEncoder(&buf).Encode(cfg); err != nil {
-		return err
-	}
 	path, err := r.Path()
 	if err != nil {
+		return err
+	}
+	root := map[string]any{"schema_version": 1}
+	if data, readErr := os.ReadFile(path); readErr == nil {
+		if _, decodeErr := toml.Decode(string(data), &root); decodeErr != nil {
+			return fmt.Errorf("invalid TOML configuration in %s", path)
+		}
+	} else if !os.IsNotExist(readErr) {
+		return fmt.Errorf("read config: %w", readErr)
+	}
+	root["schema_version"] = cfg.SchemaVersion
+	root["plane"] = map[string]any{
+		"default_profile": cfg.Plane.DefaultProfile,
+		"profiles":        cfg.Plane.Profiles,
+	}
+	var buf bytes.Buffer
+	if err := toml.NewEncoder(&buf).Encode(root); err != nil {
 		return err
 	}
 	return WritePrivate(path, buf.Bytes())

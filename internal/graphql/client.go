@@ -11,8 +11,8 @@ import (
 	"time"
 
 	gqlclient "github.com/Khan/genqlient/graphql"
-	linearconst "github.com/kongken/workctl/internal/const"
 	"github.com/kongken/workctl/internal/config"
+	linearconst "github.com/kongken/workctl/internal/const"
 	"github.com/kongken/workctl/internal/credentials"
 	"github.com/kongken/workctl/internal/errors"
 	"github.com/kongken/workctl/internal/version"
@@ -92,7 +92,7 @@ func ResolvedAPIKey() (string, error) {
 	}
 
 	return "", errors.NewAuthError(
-		"No API key configured. Set LINEAR_API_KEY, add api_key to linear.toml or ~/.config/linear/config.toml, or run `workctl auth login`.",
+		"No API key configured. Set LINEAR_API_KEY, add api_key to [linear] in ~/.config/workctl.toml or the project config, or run `workctl auth login`.",
 	)
 }
 
