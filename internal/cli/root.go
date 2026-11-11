@@ -76,6 +76,7 @@ func configureRoot(cmd *cobra.Command) {
 			return
 		}
 		config.SetCLIWorkspace(workspace)
+		_ = config.LoadUserConfigFromHome()
 		_ = config.LoadProjectConfigFromCwd()
 		keyring.UseOS()
 		_, _ = credentials.Load()

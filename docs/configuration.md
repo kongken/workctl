@@ -1,6 +1,6 @@
 # 配置与凭据
 
-Linear 的 `LINEAR_*`、当前目录 `linear.toml` / `.linear.toml`、原 credentials 路径和 keyring service 不变。Plane 读取另一套配置；`workctl plane` 不初始化 Linear 凭据。
+Linear 的 `LINEAR_*`、当前目录 `linear.toml` / `.linear.toml`、原 credentials 路径和 keyring service 不变。字符串选项还可以放在用户级配置 `$XDG_CONFIG_HOME/linear/config.toml`（默认 `~/.config/linear/config.toml`；Windows 为 `%APPDATA%/linear/config.toml`），各来源优先级为 `LINEAR_<KEY>` 环境变量 > 当前目录 `linear.toml` / `.linear.toml` > 用户级配置；文件不存在时忽略。该文件与 Plane 的 `~/.config/workctl/config.toml` 相互独立，若其中保存 `api_key` 建议权限设为 0600。Plane 读取另一套配置；`workctl plane` 不初始化 Linear 凭据。
 
 Plane 用户配置：Unix 为 `$XDG_CONFIG_HOME/workctl/config.toml`，默认 `~/.config/workctl/config.toml`；Windows 为 `%APPDATA%/workctl/config.toml`。当前目录可有 `workctl.toml`，不存在时读取 `.workctl.toml`，不向父目录搜索。
 

@@ -92,7 +92,7 @@ func ResolvedAPIKey() (string, error) {
 	}
 
 	return "", errors.NewAuthError(
-		"No API key configured. Set LINEAR_API_KEY, add api_key to .linear.toml, or run `workctl auth login`.",
+		"No API key configured. Set LINEAR_API_KEY, add api_key to linear.toml or ~/.config/linear/config.toml, or run `workctl auth login`.",
 	)
 }
 

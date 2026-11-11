@@ -28,6 +28,7 @@ func newGetCommand() *cobra.Command {
 		Short: "Print a configuration value",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			_ = config.LoadUserConfigFromHome()
 			_ = config.LoadProjectConfigFromCwd()
 			val, ok := config.GetOption(args[0])
 			if !ok {
