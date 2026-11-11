@@ -67,6 +67,19 @@ func LoadUserConfigFromHome() error {
 	return LoadUserConfig(path)
 }
 
+// Load resolves the user-level and project-level config in precedence order,
+// returning a descriptive error for the first invalid file instead of silently
+// falling back to other sources.
+func Load() error {
+	if err := LoadUserConfigFromHome(); err != nil {
+		return fmt.Errorf("Invalid user configuration: %w", err)
+	}
+	if err := LoadProjectConfigFromCwd(); err != nil {
+		return fmt.Errorf("Invalid project configuration: %w", err)
+	}
+	return nil
+}
+
 // LoadProjectConfig searches cwd (and optional explicit paths) for project config.
 // Callers in tests may pass paths; production should call LoadProjectConfigFromCwd.
 func LoadProjectConfig(paths ...string) error {
@@ -75,7 +88,7 @@ func LoadProjectConfig(paths ...string) error {
 }
 
 // loadConfig reads the first existing file in paths into target. A missing file
-// is not an error.
+// is not an error; a parse failure names the offending file.
 func loadConfig(target *map[string]any, paths []string) error {
 	for _, path := range paths {
 		data, err := os.ReadFile(path)
@@ -87,7 +100,9 @@ func loadConfig(target *map[string]any, paths []string) error {
 		}
 		var parsed map[string]any
 		if _, err := toml.Decode(string(data), &parsed); err != nil {
-			return err
+			// TOML errors report the line and key only, not the values, so the
+			// wrapped error is safe to show even when the file holds an api_key.
+			return fmt.Errorf("invalid TOML in %s: %w", path, err)
 		}
 		*target = parsed
 		return nil

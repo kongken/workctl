@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/kongken/workctl/internal/config"
@@ -166,7 +167,30 @@ func TestInvalidUserConfigReturnsError(t *testing.T) {
 	if err := os.WriteFile(path, []byte("team_id = \"unterminated\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := config.LoadUserConfigFromHome(); err == nil {
+	err := config.LoadUserConfigFromHome()
+	if err == nil {
 		t.Fatal("expected invalid TOML to fail")
+	}
+	if !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), "toml:") {
+		t.Fatalf("error should name the file and parse failure, got %v", err)
+	}
+}
+
+func TestLoadReportsInvalidUserConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	path := filepath.Join(dir, "linear", "config.toml")
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("team_id = \"unterminated\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := config.Load()
+	if err == nil {
+		t.Fatal("expected Load to fail on invalid user config")
+	}
+	if !strings.Contains(err.Error(), "Invalid user configuration") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

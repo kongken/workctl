@@ -2,6 +2,8 @@ package cli_test
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -61,5 +63,28 @@ func TestWorkspaceFlagSetsConfig(t *testing.T) {
 	}
 	if got := config.CLIWorkspace(); got != "acme" {
 		t.Fatalf("CLIWorkspace = %q, want acme", got)
+	}
+}
+
+func TestConfigGetReportsInvalidUserConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	path := filepath.Join(dir, "linear", "config.toml")
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("team_id = \"unterminated\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := cli.NewRoot()
+	cmd.SetOut(new(bytes.Buffer))
+	cmd.SetErr(new(bytes.Buffer))
+	cmd.SetArgs([]string{"config", "get", "team_id"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected invalid user config to fail")
+	}
+	if !strings.Contains(err.Error(), "Invalid user configuration") || !strings.Contains(err.Error(), "toml:") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
