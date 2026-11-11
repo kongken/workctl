@@ -80,7 +80,7 @@ func TestUserConfigPathUsesXDG(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := filepath.Join(dir, "linear", "config.toml")
+	want := filepath.Join(dir, "workctl.toml")
 	if path != want {
 		t.Fatalf("path = %q want %q", path, want)
 	}
@@ -90,10 +90,7 @@ func writeUserConfig(t *testing.T, body string) {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	path := filepath.Join(dir, "linear", "config.toml")
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	path := filepath.Join(dir, "workctl.toml")
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +104,7 @@ func TestGetOptionFromUserConfig(t *testing.T) {
 	if err := config.LoadProjectConfig(); err != nil {
 		t.Fatal(err)
 	}
-	writeUserConfig(t, "team_id = \"HOME\"\nworkspace = \"home-ws\"\n")
+	writeUserConfig(t, "[linear]\nteam_id = \"HOME\"\nworkspace = \"home-ws\"\n")
 	if team, ok := config.GetOption("team_id"); !ok || team != "HOME" {
 		t.Fatalf("team_id = %q ok=%v", team, ok)
 	}
@@ -117,7 +114,7 @@ func TestGetOptionFromUserConfig(t *testing.T) {
 }
 
 func TestProjectConfigOverridesUserConfig(t *testing.T) {
-	writeUserConfig(t, "team_id = \"HOME\"\n")
+	writeUserConfig(t, "[linear]\nteam_id = \"HOME\"\n")
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".linear.toml")
 	if err := os.WriteFile(path, []byte("team_id = \"PROJ\"\n"), 0o644); err != nil {
@@ -133,7 +130,7 @@ func TestProjectConfigOverridesUserConfig(t *testing.T) {
 }
 
 func TestEnvOverridesUserConfig(t *testing.T) {
-	writeUserConfig(t, "team_id = \"HOME\"\n")
+	writeUserConfig(t, "[linear]\nteam_id = \"HOME\"\n")
 	if err := config.LoadProjectConfig(); err != nil {
 		t.Fatal(err)
 	}
@@ -160,10 +157,7 @@ func TestMissingUserConfigYieldsNoOption(t *testing.T) {
 func TestInvalidUserConfigReturnsError(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	path := filepath.Join(dir, "linear", "config.toml")
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	path := filepath.Join(dir, "workctl.toml")
 	if err := os.WriteFile(path, []byte("team_id = \"unterminated\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -179,10 +173,7 @@ func TestInvalidUserConfigReturnsError(t *testing.T) {
 func TestLoadReportsInvalidUserConfig(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	path := filepath.Join(dir, "linear", "config.toml")
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	path := filepath.Join(dir, "workctl.toml")
 	if err := os.WriteFile(path, []byte("team_id = \"unterminated\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}

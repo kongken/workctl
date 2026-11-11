@@ -102,10 +102,7 @@ func writeInvalidUserConfig(t *testing.T) {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	path := filepath.Join(dir, "linear", "config.toml")
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	path := filepath.Join(dir, "workctl.toml")
 	if err := os.WriteFile(path, []byte("team_id = \"unterminated\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +120,7 @@ func TestInvalidUserConfigFailsLinearCommands(t *testing.T) {
 			t.Fatalf("args=%v: wrote stdout %q", args, out)
 		}
 		msg := errOut.String()
-		if !strings.Contains(msg, "Invalid user configuration") || !strings.Contains(msg, "toml:") || !strings.Contains(msg, "config.toml") {
+		if !strings.Contains(msg, "Invalid user configuration") || !strings.Contains(msg, "toml:") || !strings.Contains(msg, "workctl.toml") {
 			t.Fatalf("args=%v: unexpected error output %q", args, msg)
 		}
 		if strings.Count(msg, "✗") != 1 {
@@ -132,8 +129,12 @@ func TestInvalidUserConfigFailsLinearCommands(t *testing.T) {
 	}
 }
 
-func TestPlaneIgnoresInvalidLinearUserConfig(t *testing.T) {
+func TestPlaneIgnoresLinearSettings(t *testing.T) {
 	writeInvalidUserConfig(t)
+	path := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "workctl.toml")
+	if err := os.WriteFile(path, []byte("[linear]\napi_key = \"linear-secret\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
 	code := workcli.Run(context.Background(), []string{"plane"}, strings.NewReader(""), out, errOut)
 	if code != 0 {

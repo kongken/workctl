@@ -57,6 +57,26 @@ func TestProfileRoundTripAndProjectPrecedence(t *testing.T) {
 	}
 }
 
+func TestSharedFileAllowsLinearSectionButRejectsUnknownPlaneKeys(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "workctl.toml")
+	valid := "schema_version = 1\n[plane]\ndefault_profile = 'cloud'\n[plane.profiles.cloud]\nbase_url = 'https://api.plane.so'\nworkspace = 'acme'\napi_version = 'v2'\n[linear]\nteam_id = 'ENG'\n"
+	if err := os.WriteFile(file, []byte(valid), 0600); err != nil {
+		t.Fatal(err)
+	}
+	projectDir := t.TempDir()
+	r := planeconfig.Resolver{UserFile: file, ProjectDir: projectDir, Getenv: func(string) string { return "" }}
+	if _, err := r.Resolve(planeconfig.Options{}); err != nil {
+		t.Fatalf("shared config rejected Linear section: %v", err)
+	}
+	unknown := "schema_version = 1\n[linear]\nteam_id = 'ENG'\n[plane]\nunknown = 'bad'\n"
+	if err := os.WriteFile(file, []byte(unknown), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Resolve(planeconfig.Options{}); err == nil || !strings.Contains(err.Error(), "unknown configuration key") {
+		t.Fatalf("unknown Plane key was accepted: %v", err)
+	}
+}
 func TestInvalidConfigFailsInsteadOfUsingDefaults(t *testing.T) {
 	for _, text := range []string{"schema_version=2\n", "schema_version=1\n[plane]\napi_key='secret'\n"} {
 		dir := t.TempDir()
