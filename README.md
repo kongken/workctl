@@ -55,6 +55,24 @@ workctl multica delegate ENG-123 \
   --prompt-file .workctl/agent-prompts/default.md
 ```
 
+The same integration exposes agent CRUD operations. Agent deletion maps to
+Multica's archive operation, so it can be reversed with `restore`:
+
+```bash
+workctl multica agent list --include-archived
+workctl multica agent get AGENT_UUID
+workctl multica agent create --name Builder --runtime-id RUNTIME_UUID \
+  --instructions-file .workctl/agent-prompts/default.md
+workctl multica agent update AGENT_UUID \
+  --instructions-file .workctl/agent-prompts/default.md
+workctl multica agent delete AGENT_UUID
+workctl multica agent restore AGENT_UUID
+```
+
+These commands return the JSON produced by the Multica CLI. Use
+`--multica-command` on any command to point workctl at a wrapper or a local
+test executable.
+
 The delegate command reads the Linear issue through workctl's existing GraphQL
 client, updates the selected Multica agent when `--prompt-file` is provided,
 then creates an assigned Multica issue with the Linear title, description, and

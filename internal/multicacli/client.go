@@ -19,6 +19,29 @@ type Client struct {
 	Exec    Executor
 }
 
+// AgentCreateInput contains the writable fields supported by the agent
+// lifecycle commands. Name and RuntimeID are required by Multica.
+type AgentCreateInput struct {
+	Name               string
+	RuntimeID          string
+	Description        string
+	Instructions       string
+	Model              string
+	MaxConcurrentTasks *int32
+}
+
+// AgentUpdateInput uses pointers so callers can distinguish an omitted field
+// from an explicit empty value (which clears that field in Multica).
+type AgentUpdateInput struct {
+	Name               *string
+	Description        *string
+	Instructions       *string
+	Model              *string
+	Status             *string
+	RuntimeID          *string
+	MaxConcurrentTasks *int32
+}
+
 // Executor is the process seam used by tests and future integrations.
 type Executor func(ctx context.Context, command string, args []string, stdin io.Reader) ([]byte, []byte, error)
 
@@ -32,11 +55,88 @@ func New(command string) Client {
 
 // UpdateAgentInstructions replaces the persisted instructions for an agent.
 func (c Client) UpdateAgentInstructions(ctx context.Context, agentID, instructions string) (json.RawMessage, error) {
-	return c.run(ctx, []string{
-		"agent", "update", agentID,
-		"--instructions", instructions,
-		"--output", "json",
-	}, nil)
+	return c.UpdateAgent(ctx, agentID, AgentUpdateInput{Instructions: &instructions})
+}
+
+// ListAgents returns all visible agents, optionally including archived agents.
+func (c Client) ListAgents(ctx context.Context, includeArchived bool) (json.RawMessage, error) {
+	args := []string{"agent", "list"}
+	if includeArchived {
+		args = append(args, "--include-archived")
+	}
+	args = append(args, "--output", "json")
+	return c.run(ctx, args, nil)
+}
+
+// GetAgent returns one agent by UUID.
+func (c Client) GetAgent(ctx context.Context, agentID string) (json.RawMessage, error) {
+	return c.run(ctx, []string{"agent", "get", agentID, "--output", "json"}, nil)
+}
+
+// CreateAgent creates a Multica agent.
+func (c Client) CreateAgent(ctx context.Context, input AgentCreateInput) (json.RawMessage, error) {
+	args := []string{"agent", "create", "--name", input.Name, "--runtime-id", input.RuntimeID}
+	appendAgentCreateOptions(&args, input)
+	args = append(args, "--output", "json")
+	return c.run(ctx, args, nil)
+}
+
+// UpdateAgent updates the fields present in input.
+func (c Client) UpdateAgent(ctx context.Context, agentID string, input AgentUpdateInput) (json.RawMessage, error) {
+	args := []string{"agent", "update", agentID}
+	appendAgentUpdateOptions(&args, input)
+	args = append(args, "--output", "json")
+	return c.run(ctx, args, nil)
+}
+
+// ArchiveAgent is the delete operation exposed by workctl. Multica retains
+// archived agents so they can be restored later.
+func (c Client) ArchiveAgent(ctx context.Context, agentID string) (json.RawMessage, error) {
+	return c.run(ctx, []string{"agent", "archive", agentID, "--output", "json"}, nil)
+}
+
+// RestoreAgent restores an archived agent.
+func (c Client) RestoreAgent(ctx context.Context, agentID string) (json.RawMessage, error) {
+	return c.run(ctx, []string{"agent", "restore", agentID, "--output", "json"}, nil)
+}
+
+func appendAgentCreateOptions(args *[]string, input AgentCreateInput) {
+	if input.Description != "" {
+		*args = append(*args, "--description", input.Description)
+	}
+	if input.Instructions != "" {
+		*args = append(*args, "--instructions", input.Instructions)
+	}
+	if input.Model != "" {
+		*args = append(*args, "--model", input.Model)
+	}
+	if input.MaxConcurrentTasks != nil {
+		*args = append(*args, "--max-concurrent-tasks", fmt.Sprint(*input.MaxConcurrentTasks))
+	}
+}
+
+func appendAgentUpdateOptions(args *[]string, input AgentUpdateInput) {
+	if input.Name != nil {
+		*args = append(*args, "--name", *input.Name)
+	}
+	if input.Description != nil {
+		*args = append(*args, "--description", *input.Description)
+	}
+	if input.Instructions != nil {
+		*args = append(*args, "--instructions", *input.Instructions)
+	}
+	if input.Model != nil {
+		*args = append(*args, "--model", *input.Model)
+	}
+	if input.Status != nil {
+		*args = append(*args, "--status", *input.Status)
+	}
+	if input.RuntimeID != nil {
+		*args = append(*args, "--runtime-id", *input.RuntimeID)
+	}
+	if input.MaxConcurrentTasks != nil {
+		*args = append(*args, "--max-concurrent-tasks", fmt.Sprint(*input.MaxConcurrentTasks))
+	}
 }
 
 // CreateIssueInput describes a Linear issue handoff to Multica.

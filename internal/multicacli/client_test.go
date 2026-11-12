@@ -69,3 +69,83 @@ func TestCreateIssueStreamsDescriptionAndOptionalProject(t *testing.T) {
 		t.Fatalf("body = %q", body)
 	}
 }
+
+func TestAgentLifecycleCommands(t *testing.T) {
+	tests := []struct {
+		name string
+		call func(Client) error
+		want []string
+	}{
+		{
+			name: "list archived",
+			call: func(c Client) error {
+				_, err := c.ListAgents(context.Background(), true)
+				return err
+			},
+			want: []string{"agent", "list", "--include-archived", "--output", "json"},
+		},
+		{
+			name: "get",
+			call: func(c Client) error {
+				_, err := c.GetAgent(context.Background(), "agent-1")
+				return err
+			},
+			want: []string{"agent", "get", "agent-1", "--output", "json"},
+		},
+		{
+			name: "archive",
+			call: func(c Client) error {
+				_, err := c.ArchiveAgent(context.Background(), "agent-1")
+				return err
+			},
+			want: []string{"agent", "archive", "agent-1", "--output", "json"},
+		},
+		{
+			name: "restore",
+			call: func(c Client) error {
+				_, err := c.RestoreAgent(context.Background(), "agent-1")
+				return err
+			},
+			want: []string{"agent", "restore", "agent-1", "--output", "json"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var got []string
+			client := Client{Command: "multica-test", Exec: func(_ context.Context, _ string, args []string, _ io.Reader) ([]byte, []byte, error) {
+				got = append([]string(nil), args...)
+				return []byte(`{"id":"agent-1"}`), nil, nil
+			}}
+			if err := test.call(client); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("args = %#v, want %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestCreateAndUpdateAgentArguments(t *testing.T) {
+	var calls [][]string
+	client := Client{Command: "multica-test", Exec: func(_ context.Context, _ string, args []string, _ io.Reader) ([]byte, []byte, error) {
+		calls = append(calls, append([]string(nil), args...))
+		return []byte(`{"id":"agent-1"}`), nil, nil
+	}}
+	max := int32(3)
+	if _, err := client.CreateAgent(context.Background(), AgentCreateInput{
+		Name: "Builder", RuntimeID: "runtime-1", Description: "builds", Instructions: "be concise", Model: "gpt-4o", MaxConcurrentTasks: &max,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	name := "Builder 2"
+	status := "paused"
+	if _, err := client.UpdateAgent(context.Background(), "agent-1", AgentUpdateInput{Name: &name, Status: &status}); err != nil {
+		t.Fatal(err)
+	}
+	wantCreate := []string{"agent", "create", "--name", "Builder", "--runtime-id", "runtime-1", "--description", "builds", "--instructions", "be concise", "--model", "gpt-4o", "--max-concurrent-tasks", "3", "--output", "json"}
+	wantUpdate := []string{"agent", "update", "agent-1", "--name", "Builder 2", "--status", "paused", "--output", "json"}
+	if !reflect.DeepEqual(calls, [][]string{wantCreate, wantUpdate}) {
+		t.Fatalf("args = %#v, want %#v", calls, [][]string{wantCreate, wantUpdate})
+	}
+}
