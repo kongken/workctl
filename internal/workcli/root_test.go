@@ -5,6 +5,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -91,5 +93,54 @@ func TestLinearEntrypointAcceptsGroupedCommands(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), "Manage Linear issues") {
 		t.Fatalf("missing Linear issue command: %s", output)
+	}
+}
+
+// writeInvalidUserConfig points XDG_CONFIG_HOME at a temp dir holding a
+// syntactically invalid user-level Linear config.
+func writeInvalidUserConfig(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	path := filepath.Join(dir, "workctl.toml")
+	if err := os.WriteFile(path, []byte("team_id = \"unterminated\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestInvalidUserConfigFailsLinearCommands(t *testing.T) {
+	writeInvalidUserConfig(t)
+	for _, args := range [][]string{{"config", "get", "team_id"}, {"issue", "view", "ENG-1"}} {
+		out, errOut := new(bytes.Buffer), new(bytes.Buffer)
+		code := workcli.Run(context.Background(), args, strings.NewReader(""), out, errOut)
+		if code == 0 {
+			t.Fatalf("args=%v: expected a non-zero exit for invalid user config", args)
+		}
+		if out.Len() != 0 {
+			t.Fatalf("args=%v: wrote stdout %q", args, out)
+		}
+		msg := errOut.String()
+		if !strings.Contains(msg, "Invalid user configuration") || !strings.Contains(msg, "toml:") || !strings.Contains(msg, "workctl.toml") {
+			t.Fatalf("args=%v: unexpected error output %q", args, msg)
+		}
+		if strings.Count(msg, "✗") != 1 {
+			t.Fatalf("args=%v: error rendered more than once: %q", args, msg)
+		}
+	}
+}
+
+func TestPlaneIgnoresLinearSettings(t *testing.T) {
+	writeInvalidUserConfig(t)
+	path := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "workctl.toml")
+	if err := os.WriteFile(path, []byte("[linear]\napi_key = \"linear-secret\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
+	code := workcli.Run(context.Background(), []string{"plane"}, strings.NewReader(""), out, errOut)
+	if code != 0 {
+		t.Fatalf("plane should ignore the Linear config, code=%d stderr=%q", code, errOut)
+	}
+	if strings.Contains(errOut.String(), "Invalid user configuration") {
+		t.Fatalf("plane surfaced a Linear config error: %q", errOut)
 	}
 }

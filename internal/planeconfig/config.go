@@ -41,7 +41,9 @@ type Options struct {
 
 type UserConfig struct {
 	SchemaVersion int `toml:"schema_version"`
-	Plane         struct {
+	// The shared file may contain a Linear table. It is intentionally not
+	// decoded by Plane; decodeFile ignores that namespace during validation.
+	Plane struct {
 		DefaultProfile string             `toml:"default_profile,omitempty"`
 		Profiles       map[string]Profile `toml:"profiles"`
 	} `toml:"plane"`
@@ -65,25 +67,36 @@ type Resolver struct {
 func ConfigPath() (string, error) {
 	if runtime.GOOS == "windows" {
 		if p := os.Getenv("APPDATA"); p != "" {
-			return filepath.Join(p, "workctl", "config.toml"), nil
+			return filepath.Join(p, "workctl.toml"), nil
 		}
 		return "", fmt.Errorf("APPDATA is not set")
 	}
 	if p := os.Getenv("XDG_CONFIG_HOME"); p != "" {
-		return filepath.Join(p, "workctl", "config.toml"), nil
+		return filepath.Join(p, "workctl.toml"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "workctl", "config.toml"), nil
+	return filepath.Join(home, ".config", "workctl.toml"), nil
 }
 
 func (r Resolver) Path() (string, error) {
 	if r.UserFile != "" {
 		return r.UserFile, nil
 	}
-	return ConfigPath()
+	path, err := ConfigPath()
+	if err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(path); err == nil {
+		return path, nil
+	}
+	legacy := filepath.Join(filepath.Dir(path), "workctl", "config.toml")
+	if _, err := os.Stat(legacy); err == nil {
+		return legacy, nil
+	}
+	return path, nil
 }
 func (r Resolver) env(key string) string {
 	if r.Getenv != nil {
@@ -107,13 +120,41 @@ func decodeFile(path string, value interface{}) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("read config: %w", err)
 	}
-	meta, err := toml.Decode(string(data), value)
+	text := string(data)
+	if _, shared := value.(*UserConfig); shared {
+		lines := strings.Split(text, "\n")
+		filtered := make([]string, 0, len(lines))
+		skip := false
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "[linear") && strings.HasSuffix(trimmed, "]") {
+				skip = true
+				continue
+			}
+			if skip && strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+				skip = false
+			}
+			if !skip {
+				filtered = append(filtered, line)
+			}
+		}
+		text = strings.Join(filtered, "\n")
+	}
+	meta, err := toml.Decode(text, value)
 	// TOML errors can quote input; do not echo file contents (possibly secrets).
 	if err != nil {
 		return false, fmt.Errorf("invalid TOML configuration in %s", path)
 	}
 	if keys := meta.Undecoded(); len(keys) > 0 {
-		return false, fmt.Errorf("unknown configuration key %s in %s", keys[0], path)
+		for _, key := range keys {
+			if len(key) > 0 && key[0] == "linear" {
+				continue
+			}
+			if _, shared := value.(*UserConfig); shared && strings.HasPrefix(key.String(), "plane.") && (key.String() == "plane.default_profile" || key.String() == "plane.profiles" || strings.HasPrefix(key.String(), "plane.profiles.")) {
+				continue
+			}
+			return false, fmt.Errorf("unknown configuration key %s in %s", key, path)
+		}
 	}
 	return true, nil
 }
@@ -324,12 +365,25 @@ func (r Resolver) SetDefault(name string) error {
 	return r.save(cfg)
 }
 func (r Resolver) save(cfg UserConfig) error {
-	var buf bytes.Buffer
-	if err := toml.NewEncoder(&buf).Encode(cfg); err != nil {
-		return err
-	}
 	path, err := r.Path()
 	if err != nil {
+		return err
+	}
+	root := map[string]any{"schema_version": 1}
+	if data, readErr := os.ReadFile(path); readErr == nil {
+		if _, decodeErr := toml.Decode(string(data), &root); decodeErr != nil {
+			return fmt.Errorf("invalid TOML configuration in %s", path)
+		}
+	} else if !os.IsNotExist(readErr) {
+		return fmt.Errorf("read config: %w", readErr)
+	}
+	root["schema_version"] = cfg.SchemaVersion
+	root["plane"] = map[string]any{
+		"default_profile": cfg.Plane.DefaultProfile,
+		"profiles":        cfg.Plane.Profiles,
+	}
+	var buf bytes.Buffer
+	if err := toml.NewEncoder(&buf).Encode(root); err != nil {
 		return err
 	}
 	return WritePrivate(path, buf.Bytes())

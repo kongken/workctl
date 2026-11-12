@@ -70,15 +70,19 @@ func NewLinearRoot() *cobra.Command {
 func configureRoot(cmd *cobra.Command) {
 	var workspace string
 
-	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		// Plane has an independent configuration and credential store.
+	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// Plane has an independent configuration and credential store, so a
+		// broken Linear config must not affect Plane commands.
 		if inPlaneTree(cmd) {
-			return
+			return nil
 		}
 		config.SetCLIWorkspace(workspace)
-		_ = config.LoadProjectConfigFromCwd()
+		if err := config.Load(); err != nil {
+			return clierrors.NewValidationError(err.Error(), clierrors.WithCause(err))
+		}
 		keyring.UseOS()
 		_, _ = credentials.Load()
+		return nil
 	}
 	cmd.PersistentFlags().StringVar(&workspace, "workspace", "", "Target workspace (uses credentials)")
 	cmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {

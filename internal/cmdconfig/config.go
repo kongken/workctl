@@ -2,7 +2,6 @@ package cmdconfig
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/kongken/workctl/internal/config"
 	"github.com/kongken/workctl/internal/errors"
@@ -27,17 +26,20 @@ func newGetCommand() *cobra.Command {
 		Use:   "get <key>",
 		Short: "Print a configuration value",
 		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			_ = config.LoadProjectConfigFromCwd()
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Surface the same parse errors as the root pre-run, including when the
+			// command is invoked without it.
+			if err := config.Load(); err != nil {
+				return errors.NewValidationError(err.Error(), errors.WithCause(err))
+			}
 			val, ok := config.GetOption(args[0])
 			if !ok {
-				errors.HandleError(
-					errors.NewNotFoundError("Config key", args[0]),
-					"Failed to get config",
+				return errors.NewCliError(
+					fmt.Sprintf("Failed to get config: %s", errors.NewNotFoundError("Config key", args[0]).Error()),
 				)
-				os.Exit(1)
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), val)
+			return nil
 		},
 	}
 }

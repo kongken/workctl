@@ -124,7 +124,7 @@ func TestResolvedAPIKeyMissing(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected auth error")
 	}
-	if !strings.Contains(err.Error(), "No API key configured") {
+	if !strings.Contains(err.Error(), "No API key configured") || !strings.Contains(err.Error(), "~/.config/workctl.toml") || !strings.Contains(err.Error(), "[linear]") {
 		t.Fatalf("got %v", err)
 	}
 }
