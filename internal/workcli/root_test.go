@@ -57,6 +57,19 @@ func TestLinearCommandGroup(t *testing.T) {
 		t.Fatalf("missing explicit Linear command group: %s", output)
 	}
 }
+
+func TestMulticaCommandGroup(t *testing.T) {
+	root := workcli.NewRoot()
+	output := new(bytes.Buffer)
+	root.SetOut(output)
+	root.SetArgs([]string{"multica", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "Delegate Linear work to Multica") {
+		t.Fatalf("missing Multica command group: %s", output)
+	}
+}
 func TestPlaneHelpRequiresNoCredentials(t *testing.T) {
 	root := workcli.NewRoot()
 	output := new(bytes.Buffer)
