@@ -73,6 +73,11 @@ func (c Client) GetAgent(ctx context.Context, agentID string) (json.RawMessage, 
 	return c.run(ctx, []string{"agent", "get", agentID, "--output", "json"}, nil)
 }
 
+// GetIssue returns one issue by UUID or identifier.
+func (c Client) GetIssue(ctx context.Context, issueID string) (json.RawMessage, error) {
+	return c.run(ctx, []string{"issue", "get", issueID, "--output", "json"}, nil)
+}
+
 // CreateAgent creates a Multica agent.
 func (c Client) CreateAgent(ctx context.Context, input AgentCreateInput) (json.RawMessage, error) {
 	args := []string{"agent", "create", "--name", input.Name, "--runtime-id", input.RuntimeID}
@@ -139,32 +144,168 @@ func appendAgentUpdateOptions(args *[]string, input AgentUpdateInput) {
 	}
 }
 
-// CreateIssueInput describes a Linear issue handoff to Multica.
+// CreateIssueInput describes an issue to create through Multica.
+// AssigneeID and ParentID accept a member, agent, or squad reference.
 type CreateIssueInput struct {
 	Title       string
 	Description string
-	AgentID     string
+	AssigneeID  string
 	ProjectID   string
 	Status      string
+	Priority    string
+	ParentID    string
 }
 
-// CreateIssue creates and assigns a Multica issue through the CLI.
+// CreateIssue creates a Multica issue through the CLI.
 func (c Client) CreateIssue(ctx context.Context, input CreateIssueInput) (json.RawMessage, error) {
-	args := []string{
-		"issue", "create",
-		"--title", input.Title,
-		"--description-stdin",
-		"--assignee-id", input.AgentID,
-		"--status", input.Status,
-		"--output", "json",
+	args := []string{"issue", "create", "--title", input.Title, "--description-stdin", "--output", "json"}
+	args = appendIssueCreateOptions(args, input)
+	return c.run(ctx, args, strings.NewReader(input.Description))
+}
+
+func appendIssueCreateOptions(args []string, input CreateIssueInput) []string {
+	if input.AssigneeID != "" {
+		args = append(args, "--assignee-id", input.AssigneeID)
 	}
 	if input.ProjectID != "" {
 		args = append(args, "--project", input.ProjectID)
 	}
-	return c.run(ctx, args, strings.NewReader(input.Description))
+	if input.Status != "" {
+		args = append(args, "--status", input.Status)
+	}
+	if input.Priority != "" {
+		args = append(args, "--priority", input.Priority)
+	}
+	if input.ParentID != "" {
+		args = append(args, "--parent", input.ParentID)
+	}
+	return args
+}
+
+// IssueListInput filters ListIssues.
+type IssueListInput struct {
+	AssigneeID string
+	Project    string
+	Status     string
+	Limit      int
+	Offset     int
+}
+
+// ListIssues returns issues matching the filters as JSON.
+func (c Client) ListIssues(ctx context.Context, input IssueListInput) (json.RawMessage, error) {
+	args := []string{"issue", "list", "--output", "json"}
+	if input.AssigneeID != "" {
+		args = append(args, "--assignee-id", input.AssigneeID)
+	}
+	if input.Project != "" {
+		args = append(args, "--project", input.Project)
+	}
+	if input.Status != "" {
+		args = append(args, "--status", input.Status)
+	}
+	if input.Limit > 0 {
+		args = append(args, "--limit", fmt.Sprint(input.Limit))
+	}
+	if input.Offset > 0 {
+		args = append(args, "--offset", fmt.Sprint(input.Offset))
+	}
+	return c.run(ctx, args, nil)
+}
+
+// IssueUpdateInput uses pointers so callers can distinguish an omitted field
+// from an explicit empty value (which clears that field in Multica).
+type IssueUpdateInput struct {
+	Title       *string
+	Description *string
+	AssigneeID  *string
+	ProjectID   *string
+	Status      *string
+	Priority    *string
+	ParentID    *string
+}
+
+// UpdateIssue applies the fields present in input to an issue.
+func (c Client) UpdateIssue(ctx context.Context, issueID string, input IssueUpdateInput) (json.RawMessage, error) {
+	args := []string{"issue", "update", issueID, "--output", "json"}
+	if input.Title != nil {
+		args = append(args, "--title", *input.Title)
+	}
+	if input.Description != nil {
+		args = append(args, "--description-stdin")
+	}
+	if input.AssigneeID != nil {
+		args = append(args, "--assignee-id", *input.AssigneeID)
+	}
+	if input.ProjectID != nil {
+		args = append(args, "--project", *input.ProjectID)
+	}
+	if input.Status != nil {
+		args = append(args, "--status", *input.Status)
+	}
+	if input.Priority != nil {
+		args = append(args, "--priority", *input.Priority)
+	}
+	if input.ParentID != nil {
+		args = append(args, "--parent", *input.ParentID)
+	}
+	var stdin io.Reader
+	if input.Description != nil {
+		stdin = strings.NewReader(*input.Description)
+	}
+	return c.run(ctx, args, stdin)
+}
+
+// AddComment posts a comment on an issue. A non-empty parentID replies in that
+// comment thread.
+func (c Client) AddComment(ctx context.Context, issueID, content, parentID string) (json.RawMessage, error) {
+	if strings.TrimSpace(content) == "" {
+		return nil, fmt.Errorf("comment content is required")
+	}
+	args := []string{"issue", "comment", "add", issueID, "--content-stdin", "--output", "json"}
+	if parentID != "" {
+		args = append(args, "--parent", parentID)
+	}
+	return c.run(ctx, args, strings.NewReader(content))
+}
+
+// ListComments returns an issue's comments as JSON. rootsOnly returns top-level
+// threads only; recent caps the number of threads when greater than zero.
+func (c Client) ListComments(ctx context.Context, issueID string, rootsOnly bool, recent int) (json.RawMessage, error) {
+	args := []string{"issue", "comment", "list", issueID, "--output", "json"}
+	if rootsOnly {
+		args = append(args, "--roots-only")
+	}
+	if recent > 0 {
+		args = append(args, "--recent", fmt.Sprint(recent))
+	}
+	return c.run(ctx, args, nil)
+}
+
+// Run executes an arbitrary Multica CLI invocation and returns its JSON output.
+// Tool handlers use it to reach commands beyond the typed helpers.
+func (c Client) Run(ctx context.Context, args []string, stdin io.Reader) (json.RawMessage, error) {
+	return c.run(ctx, args, stdin)
+}
+
+// RunCommand executes an arbitrary Multica CLI invocation and returns stdout as
+// trimmed text. Use it for commands that do not support --output json.
+func (c Client) RunCommand(ctx context.Context, args []string, stdin io.Reader) (string, error) {
+	stdout, err := c.runBytes(ctx, args, stdin)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(stdout)), nil
 }
 
 func (c Client) run(ctx context.Context, args []string, stdin io.Reader) (json.RawMessage, error) {
+	stdout, err := c.runBytes(ctx, args, stdin)
+	if err != nil {
+		return nil, err
+	}
+	return validateJSON(stdout)
+}
+
+func (c Client) runBytes(ctx context.Context, args []string, stdin io.Reader) ([]byte, error) {
 	if c.Exec != nil {
 		stdout, stderr, err := c.Exec(ctx, c.Command, args, stdin)
 		if err != nil {
@@ -174,7 +315,7 @@ func (c Client) run(ctx context.Context, args []string, stdin io.Reader) (json.R
 			}
 			return nil, fmt.Errorf("multica command failed: %s", message)
 		}
-		return validateJSON(stdout)
+		return stdout, nil
 	}
 	cmd := exec.CommandContext(ctx, c.Command, args...)
 	cmd.Stdin = stdin
@@ -188,7 +329,7 @@ func (c Client) run(ctx context.Context, args []string, stdin io.Reader) (json.R
 		}
 		return nil, fmt.Errorf("multica command failed: %s", message)
 	}
-	return validateJSON(stdout.Bytes())
+	return stdout.Bytes(), nil
 }
 
 func validateJSON(raw []byte) (json.RawMessage, error) {
