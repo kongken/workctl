@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/kongken/workctl/internal/cli"
+	"github.com/kongken/workctl/internal/cmdmultica"
 	"github.com/kongken/workctl/internal/cmdplane"
 	clierrors "github.com/kongken/workctl/internal/errors"
 	"github.com/spf13/cobra"
@@ -16,7 +17,7 @@ import (
 // plus the Plane group. No separate linear entrypoint is registered.
 func NewRoot() *cobra.Command {
 	root := cli.NewRoot()
-	root.AddCommand(cli.NewLinearRoot(), cmdplane.New())
+	root.AddCommand(cli.NewLinearRoot(), cmdplane.New(), cmdmultica.New())
 	return root
 }
 

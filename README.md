@@ -41,6 +41,32 @@ workctl plane issue comment add ENG-123 --body 'Ready for review'
 
 Use `--api-version v1` with the explicit instance URL for a self-hosted v1 deployment. [Plane usage](docs/plane.md) covers authentication, work items, comments, resource management, attachments, and queries. [Configuration](docs/configuration.md) describes profile selection and credential isolation; [migration](docs/migration.md) covers existing scripts and rollback.
 
+## Multica delegation
+
+`workctl` can hand a Linear issue to a Multica agent through the installed
+`multica` CLI. Keep the agent instructions in a local, versioned file and sync
+them before delegation:
+
+```bash
+workctl multica prompt sync AGENT_UUID --file .workctl/agent-prompts/default.md
+workctl multica delegate ENG-123 \
+  --agent-id AGENT_UUID \
+  --project PROJECT_UUID \
+  --prompt-file .workctl/agent-prompts/default.md
+```
+
+The delegate command reads the Linear issue through workctl's existing GraphQL
+client, updates the selected Multica agent when `--prompt-file` is provided,
+then creates an assigned Multica issue with the Linear title, description, and
+source URL. It emits a JSON mapping containing both issue identifiers. The
+Multica executable can be overridden with `--multica-command` for a local test
+fixture or wrapper.
+
+This is a synchronous handoff. It does not poll Multica runs or write status
+back to Linear; a durable bridge can build on the emitted mapping. See
+[the integration research](docs/research/workctl-multica-integration.md) for
+the adapter seams, prompt rules, and follow-up work.
+
 ## Develop
 
 ```bash
