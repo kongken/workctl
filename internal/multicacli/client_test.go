@@ -55,13 +55,13 @@ func TestCreateIssueStreamsDescriptionAndOptionalProject(t *testing.T) {
 	if _, err := client.CreateIssue(context.Background(), CreateIssueInput{
 		Title:       "Fix login",
 		Description: "source body",
-		AgentID:     "agent-1",
+		AssigneeID:  "agent-1",
 		ProjectID:   "project-1",
 		Status:      "todo",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"issue", "create", "--title", "Fix login", "--description-stdin", "--assignee-id", "agent-1", "--status", "todo", "--output", "json", "--project", "project-1"}
+	want := []string{"issue", "create", "--title", "Fix login", "--description-stdin", "--output", "json", "--assignee-id", "agent-1", "--project", "project-1", "--status", "todo"}
 	if !reflect.DeepEqual(gotArgs, want) {
 		t.Fatalf("args = %#v, want %#v", gotArgs, want)
 	}
@@ -155,5 +155,66 @@ func TestCreateAndUpdateAgentArguments(t *testing.T) {
 	wantUpdate := []string{"agent", "update", "agent-1", "--name", "Builder 2", "--status", "paused", "--output", "json"}
 	if !reflect.DeepEqual(calls, [][]string{wantCreate, wantUpdate}) {
 		t.Fatalf("args = %#v, want %#v", calls, [][]string{wantCreate, wantUpdate})
+	}
+}
+
+func TestIssueListUpdateAndComments(t *testing.T) {
+	var calls [][]string
+	var bodies [][]byte
+	client := Client{Command: "multica-test", Exec: func(_ context.Context, _ string, args []string, stdin io.Reader) ([]byte, []byte, error) {
+		calls = append(calls, append([]string(nil), args...))
+		if stdin == nil {
+			bodies = append(bodies, nil)
+			return []byte(`{}`), nil, nil
+		}
+		data, err := io.ReadAll(stdin)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bodies = append(bodies, data)
+		return []byte(`{}`), nil, nil
+	}}
+
+	if _, err := client.ListIssues(context.Background(), IssueListInput{AssigneeID: "a1", Status: "todo", Limit: 10, Offset: 5}); err != nil {
+		t.Fatal(err)
+	}
+	description := "new body"
+	status := "done"
+	if _, err := client.UpdateIssue(context.Background(), "MUL-1", IssueUpdateInput{Description: &description, Status: &status}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.AddComment(context.Background(), "MUL-1", "hello", "c1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.ListComments(context.Background(), "MUL-1", true, 3); err != nil {
+		t.Fatal(err)
+	}
+
+	wantCalls := [][]string{
+		{"issue", "list", "--output", "json", "--assignee-id", "a1", "--status", "todo", "--limit", "10", "--offset", "5"},
+		{"issue", "update", "MUL-1", "--output", "json", "--description-stdin", "--status", "done"},
+		{"issue", "comment", "add", "MUL-1", "--content-stdin", "--output", "json", "--parent", "c1"},
+		{"issue", "comment", "list", "MUL-1", "--output", "json", "--roots-only", "--recent", "3"},
+	}
+	if !reflect.DeepEqual(calls, wantCalls) {
+		t.Fatalf("args = %#v, want %#v", calls, wantCalls)
+	}
+	wantBodies := [][]byte{nil, []byte("new body"), []byte("hello"), nil}
+	if !reflect.DeepEqual(bodies, wantBodies) {
+		t.Fatalf("bodies = %#v, want %#v", bodies, wantBodies)
+	}
+}
+
+func TestAddCommentRejectsEmptyContent(t *testing.T) {
+	callCount := 0
+	client := Client{Command: "multica-test", Exec: func(_ context.Context, _ string, _ []string, _ io.Reader) ([]byte, []byte, error) {
+		callCount++
+		return []byte(`{}`), nil, nil
+	}}
+	if _, err := client.AddComment(context.Background(), "MUL-1", "  ", ""); err == nil {
+		t.Fatal("expected an error for empty content")
+	}
+	if callCount != 0 {
+		t.Fatalf("multica was invoked %d times", callCount)
 	}
 }

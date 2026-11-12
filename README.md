@@ -87,18 +87,24 @@ the adapter seams, prompt rules, and follow-up work.
 
 ## MCP server
 
-`workctl mcp serve` exposes the Linear reads and Multica delegation bridge as
-Model Context Protocol tools over stdio, so an MCP client can read a Linear
-issue, sync an agent prompt, and dispatch the work:
+`workctl mcp serve` exposes Linear reads plus Multica agent and issue
+management as Model Context Protocol tools over stdio, so an MCP client can
+read a Linear issue, create or update agents, manage issues and comments, sync
+an agent prompt, and dispatch the work:
 
 ```bash
 workctl mcp serve
+workctl mcp serve --read-only   # expose only tools that read state
 ```
 
-Tools: `get_linear_issue`, `list_multica_agents`, `sync_agent_prompt`,
-`delegate_to_multica`, and `get_multica_work_status`. Multica operations use the
-installed `multica` CLI (override with `--multica-command`). See [the MCP
-guide](docs/mcp.md) for client configuration and tool parameters.
+Tools: `get_linear_issue`; agent tools `list_multica_agents`,
+`get_multica_agent`, `create_multica_agent`, `update_multica_agent`,
+`archive_multica_agent`, `restore_multica_agent`, `sync_agent_prompt`; issue
+tools `get_multica_work_status`, `list_multica_issues`, `create_multica_issue`,
+`update_multica_issue`, `add_multica_issue_comment`,
+`list_multica_issue_comments`; and `delegate_to_multica`. Multica operations
+use the installed `multica` CLI (override with `--multica-command`). See [the
+MCP guide](docs/mcp.md) for client configuration and tool parameters.
 
 ## Develop
 

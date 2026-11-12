@@ -24,12 +24,15 @@ const maxMessageBytes = 8 << 20
 // Handler runs a tool with raw JSON arguments and returns its text result.
 type Handler func(ctx context.Context, args json.RawMessage) (string, error)
 
-// Tool describes one MCP tool.
+// Tool describes one MCP tool. Write marks a tool that mutates Multica state;
+// it is metadata for callers (for example a read-only server mode) and is not
+// sent to MCP clients.
 type Tool struct {
 	Name        string
 	Description string
 	InputSchema json.RawMessage
 	Handler     Handler
+	Write       bool
 }
 
 // Server exposes a fixed set of tools over an MCP stdio transport.

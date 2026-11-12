@@ -81,7 +81,7 @@ func TestDelegateSyncsPromptBeforeCreatingIssue(t *testing.T) {
 	if fake.instructions != "Use the repo standards." {
 		t.Fatalf("instructions = %q", fake.instructions)
 	}
-	if fake.createInput.Title != "Fix login" || fake.createInput.AgentID != "agent-1" || fake.createInput.ProjectID != "project-1" {
+	if fake.createInput.Title != "Fix login" || fake.createInput.AssigneeID != "agent-1" || fake.createInput.ProjectID != "project-1" {
 		t.Fatalf("create input = %+v", fake.createInput)
 	}
 	if result.LinearIssue != "ENG-42" || result.PromptFile != promptFile {

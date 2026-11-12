@@ -97,7 +97,7 @@ func (s Service) Delegate(ctx context.Context, in DelegateInput) (*DelegateResul
 	result, err := s.Multica.CreateIssue(ctx, multicacli.CreateIssueInput{
 		Title:       issue.Title,
 		Description: HandoffDescription(issue, promptName),
-		AgentID:     in.AgentID,
+		AssigneeID:  in.AgentID,
 		ProjectID:   in.ProjectID,
 		Status:      in.Status,
 	})
