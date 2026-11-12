@@ -73,6 +73,11 @@ func (c Client) GetAgent(ctx context.Context, agentID string) (json.RawMessage, 
 	return c.run(ctx, []string{"agent", "get", agentID, "--output", "json"}, nil)
 }
 
+// GetIssue returns one issue by UUID or identifier.
+func (c Client) GetIssue(ctx context.Context, issueID string) (json.RawMessage, error) {
+	return c.run(ctx, []string{"issue", "get", issueID, "--output", "json"}, nil)
+}
+
 // CreateAgent creates a Multica agent.
 func (c Client) CreateAgent(ctx context.Context, input AgentCreateInput) (json.RawMessage, error) {
 	args := []string{"agent", "create", "--name", input.Name, "--runtime-id", input.RuntimeID}

@@ -70,6 +70,35 @@ func TestMulticaCommandGroup(t *testing.T) {
 		t.Fatalf("missing Multica command group: %s", output)
 	}
 }
+
+func TestMCPCommandGroup(t *testing.T) {
+	root := workcli.NewRoot()
+	output := new(bytes.Buffer)
+	root.SetOut(output)
+	root.SetArgs([]string{"mcp", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "Model Context Protocol") {
+		t.Fatalf("missing MCP command group: %s", output)
+	}
+}
+
+func TestMCPStdioServeListsTools(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("LINEAR_API_KEY", "linear-test")
+	input := "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\"}}\n" +
+		"{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}\n"
+	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
+	code := workcli.Run(context.Background(), []string{"mcp", "serve"}, strings.NewReader(input), out, errOut)
+	if code != 0 {
+		t.Fatalf("code = %d, stderr = %s", code, errOut)
+	}
+	if !strings.Contains(out.String(), "delegate_to_multica") {
+		t.Fatalf("tools/list output = %s", out)
+	}
+}
 func TestPlaneHelpRequiresNoCredentials(t *testing.T) {
 	root := workcli.NewRoot()
 	output := new(bytes.Buffer)

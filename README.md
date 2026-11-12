@@ -85,6 +85,21 @@ back to Linear; a durable bridge can build on the emitted mapping. See
 [the integration research](docs/research/workctl-multica-integration.md) for
 the adapter seams, prompt rules, and follow-up work.
 
+## MCP server
+
+`workctl mcp serve` exposes the Linear reads and Multica delegation bridge as
+Model Context Protocol tools over stdio, so an MCP client can read a Linear
+issue, sync an agent prompt, and dispatch the work:
+
+```bash
+workctl mcp serve
+```
+
+Tools: `get_linear_issue`, `list_multica_agents`, `sync_agent_prompt`,
+`delegate_to_multica`, and `get_multica_work_status`. Multica operations use the
+installed `multica` CLI (override with `--multica-command`). See [the MCP
+guide](docs/mcp.md) for client configuration and tool parameters.
+
 ## Develop
 
 ```bash

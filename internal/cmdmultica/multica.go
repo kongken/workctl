@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/kongken/workctl/internal/delegation"
 	clierrors "github.com/kongken/workctl/internal/errors"
-	"github.com/kongken/workctl/internal/linear"
 	"github.com/kongken/workctl/internal/multicacli"
 	"github.com/spf13/cobra"
 )
@@ -97,7 +97,7 @@ func newAgentCreateCommand() *cobra.Command {
 				if cmd.Flags().Changed("instructions") {
 					return clierrors.NewValidationError("--instructions and --instructions-file are mutually exclusive")
 				}
-				instructions, err := readPromptFile(promptFile)
+				instructions, err := delegation.ReadPromptFile(promptFile)
 				if err != nil {
 					return err
 				}
@@ -146,7 +146,7 @@ func newAgentUpdateCommand() *cobra.Command {
 				input.Instructions = &instructions
 			}
 			if promptFile != "" {
-				value, err := readPromptFile(promptFile)
+				value, err := delegation.ReadPromptFile(promptFile)
 				if err != nil {
 					return err
 				}
@@ -223,17 +223,6 @@ func newAgentRestoreCommand() *cobra.Command {
 	return cmd
 }
 
-func readPromptFile(path string) (string, error) {
-	instructions, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("read instructions file: %w", err)
-	}
-	if strings.TrimSpace(string(instructions)) == "" {
-		return "", clierrors.NewValidationError("instructions file is empty")
-	}
-	return string(instructions), nil
-}
-
 func writeRaw(out io.Writer, result json.RawMessage) error {
 	_, err := out.Write(append(result, '\n'))
 	return err
@@ -282,54 +271,17 @@ func newDelegateCommand() *cobra.Command {
 			if strings.TrimSpace(agentID) == "" {
 				return clierrors.NewValidationError("--agent-id is required")
 			}
-			issueID, err := linear.IssueIdentifier(args[0])
-			if err != nil {
-				return err
-			}
-			if issueID == "" {
-				return clierrors.NewValidationError("could not determine Linear issue identifier")
-			}
-			raw, err := linear.FetchIssueDetailsJSON(cmd.Context(), issueID)
-			if err != nil {
-				return err
-			}
-			issue, err := parseIssue(raw)
-			if err != nil {
-				return err
-			}
-
-			client := multicacli.New(command)
-			promptName := ""
-			if promptFile != "" {
-				instructions, readErr := os.ReadFile(promptFile)
-				if readErr != nil {
-					return fmt.Errorf("read prompt file: %w", readErr)
-				}
-				if strings.TrimSpace(string(instructions)) == "" {
-					return clierrors.NewValidationError("prompt file is empty")
-				}
-				if _, err := client.UpdateAgentInstructions(cmd.Context(), agentID, string(instructions)); err != nil {
-					return err
-				}
-				promptName = promptFile
-			}
-
-			result, err := client.CreateIssue(cmd.Context(), multicacli.CreateIssueInput{
-				Title:       issue.Title,
-				Description: handoffDescription(issue, promptName),
-				AgentID:     agentID,
-				ProjectID:   projectID,
-				Status:      status,
+			result, err := delegation.New(command).Delegate(cmd.Context(), delegation.DelegateInput{
+				Issue:      args[0],
+				AgentID:    agentID,
+				ProjectID:  projectID,
+				Status:     status,
+				PromptFile: promptFile,
 			})
 			if err != nil {
 				return err
 			}
-			return writeJSON(cmd.OutOrStdout(), map[string]any{
-				"linear_issue": issue.Identifier,
-				"linear_url":   issue.URL,
-				"prompt_file":  promptName,
-				"multica":      json.RawMessage(result),
-			})
+			return writeJSON(cmd.OutOrStdout(), result)
 		},
 	}
 	cmd.Flags().StringVar(&agentID, "agent-id", "", "Multica agent UUID")
@@ -338,41 +290,6 @@ func newDelegateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&promptFile, "prompt-file", "", "Sync this local prompt before delegation")
 	cmd.Flags().StringVar(&command, "multica-command", "", "Multica executable (default: multica)")
 	return cmd
-}
-
-type linearIssue struct {
-	Identifier  string  `json:"identifier"`
-	Title       string  `json:"title"`
-	Description *string `json:"description"`
-	URL         string  `json:"url"`
-}
-
-func parseIssue(raw json.RawMessage) (linearIssue, error) {
-	var issue linearIssue
-	if err := json.Unmarshal(raw, &issue); err != nil {
-		return linearIssue{}, fmt.Errorf("decode Linear issue: %w", err)
-	}
-	if issue.Identifier == "" || issue.Title == "" {
-		return linearIssue{}, fmt.Errorf("Linear issue response is missing identifier or title")
-	}
-	return issue, nil
-}
-
-func handoffDescription(issue linearIssue, promptFile string) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "## Source\n- Linear issue: %s\n", issue.Identifier)
-	if issue.URL != "" {
-		fmt.Fprintf(&b, "- URL: %s\n", issue.URL)
-	}
-	if promptFile != "" {
-		fmt.Fprintf(&b, "- Prompt file: %s\n", promptFile)
-	}
-	b.WriteString("\n")
-	if issue.Description != nil && strings.TrimSpace(*issue.Description) != "" {
-		b.WriteString(*issue.Description)
-		b.WriteString("\n")
-	}
-	return b.String()
 }
 
 func writeJSON(out io.Writer, value any) error {

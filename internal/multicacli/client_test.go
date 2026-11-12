@@ -93,6 +93,14 @@ func TestAgentLifecycleCommands(t *testing.T) {
 			want: []string{"agent", "get", "agent-1", "--output", "json"},
 		},
 		{
+			name: "get issue",
+			call: func(c Client) error {
+				_, err := c.GetIssue(context.Background(), "MUL-1")
+				return err
+			},
+			want: []string{"issue", "get", "MUL-1", "--output", "json"},
+		},
+		{
 			name: "archive",
 			call: func(c Client) error {
 				_, err := c.ArchiveAgent(context.Background(), "agent-1")
