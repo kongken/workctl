@@ -99,10 +99,23 @@ workctl mcp serve --read-only   # expose only tools that read state
 
 Tools: `get_linear_issue`; agent tools `list_multica_agents`,
 `get_multica_agent`, `create_multica_agent`, `update_multica_agent`,
-`archive_multica_agent`, `restore_multica_agent`, `sync_agent_prompt`; issue
-tools `get_multica_work_status`, `list_multica_issues`, `create_multica_issue`,
+`archive_multica_agent`, `restore_multica_agent`, `sync_agent_prompt`,
+`set_multica_agent_avatar`, `copy_multica_agent`, `get_multica_agent_env`,
+`set_multica_agent_env`, `manage_multica_agent_mcp`,
+`manage_multica_agent_skills`, `list_multica_agent_tasks`; issue tools
+`get_multica_work_status`, `list_multica_issues`, `create_multica_issue`,
 `update_multica_issue`, `add_multica_issue_comment`,
-`list_multica_issue_comments`; and `delegate_to_multica`. Multica operations
+`list_multica_issue_comments`, `assign_multica_issue`,
+`set_multica_issue_status`, `cancel_multica_issue_task`,
+`list_multica_issue_children`, `manage_multica_issue_comment`,
+`manage_multica_issue_labels`, `manage_multica_issue_metadata`,
+`manage_multica_issue_property`, `manage_multica_issue_subscribers`,
+`list_multica_issue_pull_requests`, `reorder_multica_issue`,
+`rerun_multica_issue`, `list_multica_issue_run_messages`,
+`list_multica_issue_runs`, `search_multica_issues`,
+`get_multica_issue_timeline`, `get_multica_issue_usage`,
+`get_multica_issue_wakeups`, `manage_multica_issue_wakeup`; and
+`delegate_to_multica`. Multica operations
 use the installed `multica` CLI (override with `--multica-command`). See [the
 MCP guide](docs/mcp.md) for client configuration and tool parameters.
 

@@ -281,7 +281,31 @@ func (c Client) ListComments(ctx context.Context, issueID string, rootsOnly bool
 	return c.run(ctx, args, nil)
 }
 
+// Run executes an arbitrary Multica CLI invocation and returns its JSON output.
+// Tool handlers use it to reach commands beyond the typed helpers.
+func (c Client) Run(ctx context.Context, args []string, stdin io.Reader) (json.RawMessage, error) {
+	return c.run(ctx, args, stdin)
+}
+
+// RunCommand executes an arbitrary Multica CLI invocation and returns stdout as
+// trimmed text. Use it for commands that do not support --output json.
+func (c Client) RunCommand(ctx context.Context, args []string, stdin io.Reader) (string, error) {
+	stdout, err := c.runBytes(ctx, args, stdin)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(stdout)), nil
+}
+
 func (c Client) run(ctx context.Context, args []string, stdin io.Reader) (json.RawMessage, error) {
+	stdout, err := c.runBytes(ctx, args, stdin)
+	if err != nil {
+		return nil, err
+	}
+	return validateJSON(stdout)
+}
+
+func (c Client) runBytes(ctx context.Context, args []string, stdin io.Reader) ([]byte, error) {
 	if c.Exec != nil {
 		stdout, stderr, err := c.Exec(ctx, c.Command, args, stdin)
 		if err != nil {
@@ -291,7 +315,7 @@ func (c Client) run(ctx context.Context, args []string, stdin io.Reader) (json.R
 			}
 			return nil, fmt.Errorf("multica command failed: %s", message)
 		}
-		return validateJSON(stdout)
+		return stdout, nil
 	}
 	cmd := exec.CommandContext(ctx, c.Command, args...)
 	cmd.Stdin = stdin
@@ -305,7 +329,7 @@ func (c Client) run(ctx context.Context, args []string, stdin io.Reader) (json.R
 		}
 		return nil, fmt.Errorf("multica command failed: %s", message)
 	}
-	return validateJSON(stdout.Bytes())
+	return stdout.Bytes(), nil
 }
 
 func validateJSON(raw []byte) (json.RawMessage, error) {

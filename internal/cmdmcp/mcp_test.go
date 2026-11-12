@@ -50,6 +50,34 @@ func TestServerExposesBridgeTools(t *testing.T) {
 		"add_multica_issue_comment":   false,
 		"list_multica_issue_comments": false,
 		"delegate_to_multica":         false,
+
+		"set_multica_agent_avatar":    false,
+		"copy_multica_agent":          false,
+		"get_multica_agent_env":       false,
+		"set_multica_agent_env":       false,
+		"manage_multica_agent_mcp":    false,
+		"manage_multica_agent_skills": false,
+		"list_multica_agent_tasks":    false,
+
+		"assign_multica_issue":             false,
+		"set_multica_issue_status":         false,
+		"cancel_multica_issue_task":        false,
+		"list_multica_issue_children":      false,
+		"manage_multica_issue_comment":     false,
+		"manage_multica_issue_labels":      false,
+		"manage_multica_issue_metadata":    false,
+		"manage_multica_issue_property":    false,
+		"manage_multica_issue_subscribers": false,
+		"list_multica_issue_pull_requests": false,
+		"reorder_multica_issue":            false,
+		"rerun_multica_issue":              false,
+		"list_multica_issue_run_messages":  false,
+		"list_multica_issue_runs":          false,
+		"search_multica_issues":            false,
+		"get_multica_issue_timeline":       false,
+		"get_multica_issue_usage":          false,
+		"get_multica_issue_wakeups":        false,
+		"manage_multica_issue_wakeup":      false,
 	}
 	for _, tool := range server.Tools {
 		if _, ok := want[tool.Name]; !ok {
@@ -75,8 +103,8 @@ func TestServerReadOnlyHidesWriteTools(t *testing.T) {
 			t.Errorf("read-only server exposes write tool %q", tool.Name)
 		}
 	}
-	if len(server.Tools) != 6 {
-		t.Fatalf("read-only tool count = %d, want 6", len(server.Tools))
+	if len(server.Tools) != 16 {
+		t.Fatalf("read-only tool count = %d, want 16", len(server.Tools))
 	}
 }
 
@@ -259,6 +287,179 @@ func TestAddMulticaIssueCommentRequiresContent(t *testing.T) {
 	ts := toolset{client: capturingClient(`{}`, &args)}
 	if _, err := ts.addMulticaIssueComment(context.Background(), json.RawMessage(`{"issue_id":"MUL-1"}`)); err == nil {
 		t.Fatal("expected an error for empty content")
+	}
+	if len(args) != 0 {
+		t.Fatalf("command ran despite a validation error: %#v", args)
+	}
+}
+
+func TestAgentManagementCommands(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		run   func(toolset, context.Context, json.RawMessage) (string, error)
+		want  []string
+	}{
+		{
+			name:  "copy",
+			input: `{"source_agent_id":"a1","name":"New","no_skills":true}`,
+			run:   toolset.copyMulticaAgent,
+			want:  []string{"agent", "copy", "a1", "--name", "New", "--no-skills", "--output", "json"},
+		},
+		{
+			name:  "mcp add",
+			input: `{"agent_id":"a1","action":"add","server_id":"s1"}`,
+			run:   toolset.manageMulticaAgentMCP,
+			want:  []string{"agent", "mcp", "add", "a1", "s1", "--output", "json"},
+		},
+		{
+			name:  "mcp list",
+			input: `{"agent_id":"a1","action":"list"}`,
+			run:   toolset.manageMulticaAgentMCP,
+			want:  []string{"agent", "mcp", "list", "a1", "--output", "json"},
+		},
+		{
+			name:  "skills set",
+			input: `{"agent_id":"a1","action":"set","skill_ids":["s1","s2"]}`,
+			run:   toolset.manageMulticaAgentSkills,
+			want:  []string{"agent", "skills", "set", "a1", "--skill-ids", "s1,s2", "--output", "json"},
+		},
+		{
+			name:  "tasks",
+			input: `{"agent_id":"a1","limit":5,"before":"c1"}`,
+			run:   toolset.listMulticaAgentTasks,
+			want:  []string{"agent", "tasks", "a1", "--limit", "5", "--before", "c1", "--output", "json"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var args []string
+			ts := toolset{client: capturingClient(`{}`, &args)}
+			if _, err := tc.run(ts, context.Background(), json.RawMessage(tc.input)); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(args, tc.want) {
+				t.Fatalf("args = %#v, want %#v", args, tc.want)
+			}
+		})
+	}
+}
+
+func TestIssueManagementCommands(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		run   func(toolset, context.Context, json.RawMessage) (string, error)
+		want  []string
+	}{
+		{
+			name:  "assign by id",
+			input: `{"issue_id":"MUL-1","to_id":"u1"}`,
+			run:   toolset.assignMulticaIssue,
+			want:  []string{"issue", "assign", "MUL-1", "--to-id", "u1", "--output", "json"},
+		},
+		{
+			name:  "status no-start",
+			input: `{"issue_id":"MUL-1","status":"done","start":false}`,
+			run:   toolset.setMulticaIssueStatus,
+			want:  []string{"issue", "status", "MUL-1", "done", "--no-start", "--output", "json"},
+		},
+		{
+			name:  "labels add",
+			input: `{"issue_id":"MUL-1","action":"add","label_id":"l1"}`,
+			run:   toolset.manageMulticaIssueLabels,
+			want:  []string{"issue", "label", "add", "MUL-1", "l1", "--output", "json"},
+		},
+		{
+			name:  "metadata set typed",
+			input: `{"issue_id":"MUL-1","action":"set","key":"k","value":"5","value_type":"number"}`,
+			run:   toolset.manageMulticaIssueMetadata,
+			want:  []string{"issue", "metadata", "set", "MUL-1", "--key", "k", "--value", "5", "--type", "number", "--output", "json"},
+		},
+		{
+			name:  "property unset",
+			input: `{"issue_id":"MUL-1","action":"unset","name":"p"}`,
+			run:   toolset.manageMulticaIssueProperty,
+			want:  []string{"issue", "property", "unset", "MUL-1", "--name", "p", "--output", "json"},
+		},
+		{
+			name:  "subscriber remove by id",
+			input: `{"issue_id":"MUL-1","action":"remove","user_id":"u1"}`,
+			run:   toolset.manageMulticaIssueSubscribers,
+			want:  []string{"issue", "subscriber", "remove", "MUL-1", "--user-id", "u1", "--output", "json"},
+		},
+		{
+			name:  "reorder top",
+			input: `{"issue_id":"MUL-1","top":true}`,
+			run:   toolset.reorderMulticaIssue,
+			want:  []string{"issue", "reorder", "MUL-1", "--top", "--output", "json"},
+		},
+		{
+			name:  "runs active",
+			input: `{"issue_id":"MUL-1","active":true}`,
+			run:   toolset.listMulticaIssueRuns,
+			want:  []string{"issue", "runs", "MUL-1", "--active", "--output", "json"},
+		},
+		{
+			name:  "search",
+			input: `{"query":"login","limit":5}`,
+			run:   toolset.searchMulticaIssues,
+			want:  []string{"issue", "search", "login", "--limit", "5", "--output", "json"},
+		},
+		{
+			name:  "timeline actions",
+			input: `{"issue_id":"MUL-1","actions":["comment.created","status.changed"],"since":"2025-01-01T00:00:00Z"}`,
+			run:   toolset.getMulticaIssueTimeline,
+			want:  []string{"issue", "timeline", "MUL-1", "--action", "comment.created,status.changed", "--since", "2025-01-01T00:00:00Z", "--output", "json"},
+		},
+		{
+			name:  "wakeup create",
+			input: `{"issue_id":"MUL-1","action":"create","kind":"every","every":"1h","events":["comment.created"],"instruction":"check","max_fires":5,"until_status":"done"}`,
+			run:   toolset.manageMulticaIssueWakeup,
+			want:  []string{"issue", "wakeup", "create", "MUL-1", "--kind", "every", "--every", "1h", "--event", "comment.created", "--instruction", "check", "--max-fires", "5", "--until-status", "done", "--output", "json"},
+		},
+		{
+			name:  "wakeup disable",
+			input: `{"issue_id":"MUL-1","action":"disable","wakeup_id":"w1"}`,
+			run:   toolset.manageMulticaIssueWakeup,
+			want:  []string{"issue", "wakeup", "disable", "MUL-1", "w1", "--output", "json"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var args []string
+			ts := toolset{client: capturingClient(`{}`, &args)}
+			if _, err := tc.run(ts, context.Background(), json.RawMessage(tc.input)); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(args, tc.want) {
+				t.Fatalf("args = %#v, want %#v", args, tc.want)
+			}
+		})
+	}
+}
+
+func TestCommentDeleteUsesTextOutput(t *testing.T) {
+	var args []string
+	ts := toolset{client: capturingClient("deleted", &args)}
+	got, err := ts.manageMulticaIssueComment(context.Background(), json.RawMessage(`{"comment_id":"c1","action":"delete"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "deleted" {
+		t.Fatalf("output = %q", got)
+	}
+	want := []string{"issue", "comment", "delete", "c1"}
+	if !reflect.DeepEqual(args, want) {
+		t.Fatalf("args = %#v, want %#v", args, want)
+	}
+}
+
+func TestManageAgentMCPRequiresServerID(t *testing.T) {
+	var args []string
+	ts := toolset{client: capturingClient(`{}`, &args)}
+	if _, err := ts.manageMulticaAgentMCP(context.Background(), json.RawMessage(`{"agent_id":"a1","action":"add"}`)); err == nil {
+		t.Fatal("expected an error for a missing server_id")
 	}
 	if len(args) != 0 {
 		t.Fatalf("command ran despite a validation error: %#v", args)

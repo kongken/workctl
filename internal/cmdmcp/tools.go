@@ -37,7 +37,7 @@ func (t toolset) delegationService() delegation.Service {
 	return delegation.New(t.multicaCommand)
 }
 
-func (t toolset) tools() []mcpserver.Tool {
+func (t toolset) coreTools() []mcpserver.Tool {
 	return []mcpserver.Tool{
 		{
 			Name:        "get_linear_issue",
