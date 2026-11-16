@@ -16,8 +16,29 @@ import (
 	"io"
 )
 
-// ProtocolVersion is advertised when a client does not request one.
+// ProtocolVersion is the latest protocol version this server supports. It is
+// advertised when a client does not request a version or requests one the
+// server does not support.
 const ProtocolVersion = "2025-06-18"
+
+// supportedProtocolVersions lists the MCP protocol versions this server
+// implements. Their initialize / tools / ping behavior is compatible with what
+// this server provides. During initialization the server echoes the client's
+// requested version when it is in this set; otherwise it selects
+// ProtocolVersion, the latest version it supports. Per the MCP lifecycle the
+// client then decides whether to continue on the negotiated version.
+var supportedProtocolVersions = []string{"2025-06-18", "2025-03-26", "2024-11-05"}
+
+// negotiateProtocolVersion returns the protocol version the server will use for
+// a session. It never advertises a version the server does not support.
+func negotiateProtocolVersion(requested string) string {
+	for _, version := range supportedProtocolVersions {
+		if requested == version {
+			return version
+		}
+	}
+	return ProtocolVersion
+}
 
 const maxMessageBytes = 8 << 20
 
@@ -115,10 +136,7 @@ func (s *Server) handle(ctx context.Context, req *rpcRequest) (any, *rpcError) {
 			ProtocolVersion string `json:"protocolVersion"`
 		}
 		_ = json.Unmarshal(req.Params, &params)
-		version := params.ProtocolVersion
-		if version == "" {
-			version = ProtocolVersion
-		}
+		version := negotiateProtocolVersion(params.ProtocolVersion)
 		return map[string]any{
 			"protocolVersion": version,
 			"capabilities": map[string]any{

@@ -57,21 +57,36 @@ func runServer(t *testing.T, input string) []map[string]any {
 	return responses
 }
 
-func TestInitializeEchoesProtocolVersion(t *testing.T) {
-	responses := runServer(t, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"c","version":"1"}}}`+"\n")
-	if len(responses) != 1 {
-		t.Fatalf("responses = %d", len(responses))
+func TestInitializeNegotiatesProtocolVersion(t *testing.T) {
+	cases := []struct {
+		name   string
+		params string
+		want   string
+	}{
+		{name: "supported current", params: `"protocolVersion":"2025-06-18"`, want: "2025-06-18"},
+		{name: "supported older", params: `"protocolVersion":"2024-11-05"`, want: "2024-11-05"},
+		{name: "unsupported", params: `"protocolVersion":"9999-01-01"`, want: mcpserver.ProtocolVersion},
+		{name: "omitted", params: `"capabilities":{}`, want: mcpserver.ProtocolVersion},
 	}
-	result, ok := responses[0]["result"].(map[string]any)
-	if !ok {
-		t.Fatalf("missing result: %#v", responses[0])
-	}
-	if result["protocolVersion"] != "2024-11-05" {
-		t.Fatalf("protocolVersion = %v", result["protocolVersion"])
-	}
-	capabilities, _ := result["capabilities"].(map[string]any)
-	if _, ok := capabilities["tools"]; !ok {
-		t.Fatalf("tools capability missing: %#v", capabilities)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			request := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{` + tc.params + `}}` + "\n"
+			responses := runServer(t, request)
+			if len(responses) != 1 {
+				t.Fatalf("responses = %d", len(responses))
+			}
+			result, ok := responses[0]["result"].(map[string]any)
+			if !ok {
+				t.Fatalf("missing result: %#v", responses[0])
+			}
+			if result["protocolVersion"] != tc.want {
+				t.Fatalf("protocolVersion = %v, want %q", result["protocolVersion"], tc.want)
+			}
+			capabilities, _ := result["capabilities"].(map[string]any)
+			if _, ok := capabilities["tools"]; !ok {
+				t.Fatalf("tools capability missing: %#v", capabilities)
+			}
+		})
 	}
 }
 
