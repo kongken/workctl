@@ -59,13 +59,14 @@ func runServer(t *testing.T, input string) []map[string]any {
 
 func TestInitializeNegotiatesProtocolVersion(t *testing.T) {
 	cases := []struct {
-		name   string
-		params string
-		want   string
+		name    string
+		params  string
+		want    string
+		wantErr bool
 	}{
 		{name: "supported current", params: `"protocolVersion":"2025-06-18"`, want: "2025-06-18"},
 		{name: "supported older", params: `"protocolVersion":"2024-11-05"`, want: "2024-11-05"},
-		{name: "unsupported", params: `"protocolVersion":"9999-01-01"`, want: mcpserver.ProtocolVersion},
+		{name: "unsupported", params: `"protocolVersion":"9999-01-01"`, wantErr: true},
 		{name: "omitted", params: `"capabilities":{}`, want: mcpserver.ProtocolVersion},
 	}
 	for _, tc := range cases {
@@ -74,6 +75,19 @@ func TestInitializeNegotiatesProtocolVersion(t *testing.T) {
 			responses := runServer(t, request)
 			if len(responses) != 1 {
 				t.Fatalf("responses = %d", len(responses))
+			}
+			if tc.wantErr {
+				rpcErr, ok := responses[0]["error"].(map[string]any)
+				if !ok {
+					t.Fatalf("missing error for unsupported version: %#v", responses[0])
+				}
+				if rpcErr["code"].(float64) != -32602 {
+					t.Fatalf("error code = %v", rpcErr["code"])
+				}
+				if responses[0]["result"] != nil {
+					t.Fatalf("rejected initialize returned a result: %#v", responses[0]["result"])
+				}
+				return
 			}
 			result, ok := responses[0]["result"].(map[string]any)
 			if !ok {
